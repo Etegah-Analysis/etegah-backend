@@ -10,6 +10,7 @@ export default function LandingPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpChannel, setOtpChannel] = useState('sms'); // 'sms' or 'whatsapp'
   const [otp, setOtp] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpAttempts, setOtpAttempts] = useState(0);
 
@@ -73,15 +74,19 @@ export default function LandingPage() {
         console.error("Firestore query warning:", err);
       }
 
-      // Call own relative sendOtp API (/api/sendOtp on www.etegah-analysis.com)
-      fetch('/api/sendOtp', {
+      // Call own relative sendOtp API (/api/sendOtp)
+      const res = await fetch('/api/sendOtp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: fullPhone,
           channel: otpChannel
         })
-      }).catch(err => console.error('sendOtp API fetch error:', err));
+      });
+      const data = await res.json();
+      if (data && data.code) {
+        setGeneratedCode(data.code);
+      }
 
       setStep(2);
     } catch (error) {
@@ -146,6 +151,11 @@ export default function LandingPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openDirectWhatsAppOtp = () => {
+    const text = encodeURIComponent(`مرحباً منصة اتجاه، رمز كود التفعيل الخاص بي هو: *${generatedCode || '123456'}*`);
+    window.open(`https://wa.me/16813223358?text=${text}`, '_blank');
   };
 
   React.useEffect(() => {
@@ -282,6 +292,16 @@ export default function LandingPage() {
                 autoFocus
                 className="w-full bg-[#1E293B] border border-white/10 rounded-lg px-4 py-4 text-center text-3xl font-bold tracking-[1em] focus:outline-none focus:border-cyan-500 transition text-cyan-400"
               />
+
+              {otpChannel === 'whatsapp' && (
+                <button
+                  type="button"
+                  onClick={openDirectWhatsAppOtp}
+                  className="w-full bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 text-emerald-300 font-bold py-2.5 px-4 rounded-lg text-xs flex items-center justify-center gap-2 transition"
+                >
+                  <span>🟢</span> فتح كود التفعيل عبر الواتساب فوراً
+                </button>
+              )}
 
               <button
                 type="submit"

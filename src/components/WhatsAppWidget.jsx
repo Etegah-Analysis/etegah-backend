@@ -23,9 +23,9 @@ export default function WhatsAppWidget() {
   const openWhatsAppOption = (type) => {
     let text = '';
     if (type === 'details') {
-      text = encodeURIComponent('مهتم بالتفاصيل');
+      text = encodeURIComponent('مرحباً منصة اتجاه، أنا مهتم بالتفاصيل وأود الاستفسار عن الخدمات المتاحة 📈');
     } else if (type === 'support') {
-      text = encodeURIComponent('طلب خدمة دعم العملاء');
+      text = encodeURIComponent('مرحباً منصة اتجاه، أطلب التواصل مع خدمة دعم العملاء 🎧');
     }
     window.open(`https://wa.me/${phoneNumber}?text=${text}`, '_blank');
     setIsOpen(false);
