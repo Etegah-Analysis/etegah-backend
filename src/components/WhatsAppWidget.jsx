@@ -4,7 +4,7 @@ import { MessageCircle, X, Sparkles, Headphones } from 'lucide-react';
 export default function WhatsAppWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const widgetRef = useRef(null);
-  const phoneNumber = '16813223358'; // رقم واتساب منصة اتجاه المعتمد لدى Meta
+  const phoneNumber = '14015988669'; // الرقم الجديد المخصص للواتساب وخدمة العملاء
 
   useEffect(() => {
     const handleClickOutside = (event) => {

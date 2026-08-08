@@ -155,7 +155,7 @@ export default function LandingPage() {
 
   const openDirectWhatsAppOtp = () => {
     const text = encodeURIComponent(`مرحباً منصة اتجاه، رمز كود التفعيل الخاص بي هو: *${generatedCode || '123456'}*`);
-    window.open(`https://wa.me/16813223358?text=${text}`, '_blank');
+    window.open(`https://wa.me/14015988669?text=${text}`, '_blank');
   };
 
   React.useEffect(() => {
