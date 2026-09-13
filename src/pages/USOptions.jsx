@@ -231,13 +231,12 @@ function USOptions() {
   return (
     <div className="container" style={{ padding: '40px 20px', minHeight: '80vh' }} onClick={() => setShowSuggestions(false)}>
       {/* Title Header */}
-      <div className="text-center mb-8">
-        <h1 style={{ fontSize: '2.5rem', color: 'var(--primary-blue)', fontWeight: '800' }}>رادار الأوبشن الأمريكي 🎯</h1>
-        <h1 style={{ margin: '0 0 10px 0', fontSize: '1.8rem', fontWeight: 'bold', color: 'white' }}>
-          رادار الأوبشن (السوق الأمريكي) <span style={{ fontSize: '0.8rem', color: '#8b9eb3', fontWeight: 'normal' }}>v1.1</span>
+      <div className="text-center mb-6">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white mb-2">
+          رادار الأوبشن (السوق الأمريكي) <span className="text-xs text-slate-400 font-normal">v1.1</span> 🎯
         </h1>
-        <p style={{ margin: 0, color: '#8b9eb3', fontSize: '0.95rem' }}>
-          تحليل لحظي لعقود الخيارات للأسهم الأمريكية (Calls/Puts).
+        <p className="text-xs sm:text-sm text-slate-400 m-0">
+          تحليل لحظي لعقود الخيارات للأسهم الأمريكية (Calls/Puts)
         </p>
       </div>
 

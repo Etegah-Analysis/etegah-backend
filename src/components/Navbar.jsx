@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, User, LogOut } from 'lucide-react';
 import logoImg from '../assets/logo.jpg';
 
 export default function Navbar() {
@@ -17,37 +17,65 @@ export default function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem('visitorName');
+    localStorage.removeItem('visitorPhone');
     window.location.href = '/';
   };
 
   return (
-    <nav style={{ background: 'rgba(10,25,47,0.85)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '1rem 0', position: 'sticky', top: 0, zIndex: 100 }}>
-      <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <img src={logoImg} alt="Etegah Logo" style={{ width: '40px', borderRadius: '8px' }} />
-          <span style={{ fontSize: '1.4rem', fontWeight: 'bold', letterSpacing: '1px', color: '#fff' }} className="mobile-logo-text">اتجاه للتحليل الذكي</span>
-        </div>
-        
-        <button 
-          className="mobile-toggle" 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', zIndex: 1001 }}
-        >
-          {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
-        </button>
+    <nav className="navbar-container">
+      <div className="container nav-wrapper">
+        {/* Brand Logo & Name */}
+        <Link to="/" className="brand-logo" onClick={() => setIsMobileMenuOpen(false)}>
+          <img src={logoImg} alt="Etegah Logo" className="logo-img" />
+          <span className="mobile-logo-text">اتجاه للتحليل الذكي</span>
+        </Link>
 
-        <div className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`} style={{ display: 'flex', gap: '25px', alignItems: 'center' }}>
-          <Link to="/" className="nav-link" style={{ color: '#fff', textDecoration: 'none' }} onClick={() => setIsMobileMenuOpen(false)}>الرئيسية</Link>
-          <Link to="/news" className="nav-link" style={{ color: '#fff', textDecoration: 'none' }} onClick={() => setIsMobileMenuOpen(false)}>أخبار السوق السعودي</Link>
-          <Link to="/us-options" className="nav-link" style={{ color: '#fff', textDecoration: 'none' }} onClick={() => setIsMobileMenuOpen(false)}>رادار الأوبشن</Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', borderRight: '1px solid rgba(255,255,255,0.2)', paddingRight: '15px' }} className="user-info-mobile mt-4 md:mt-0">
+        {/* Mobile top bar right section: User badge + Hamburger Menu */}
+        <div className="mobile-controls">
+          {visitorName && (
+            <span className="visitor-badge-mobile">
+              <User size={13} /> {visitorName}
+            </span>
+          )}
+          <button 
+            className="mobile-toggle-btn" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="القائمة"
+          >
+            {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+
+        {/* Navigation Links (Desktop Inline / Mobile Dropdown Drawer) */}
+        <div className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+          <Link to="/" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+            الرئيسية
+          </Link>
+          <Link to="/news" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+            أخبار السوق السعودي
+          </Link>
+          <Link to="/us-options" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+            رادار الأوبشن
+          </Link>
+
+          <div className="user-section-mobile">
             {visitorName ? (
-              <>
-                <span style={{ color: '#00d2ff', fontWeight: 'bold', fontSize: '0.95rem' }}>{visitorName}</span>
-                <button onClick={handleLogout} className="button secondary small" style={{ padding: '5px 12px', fontSize: '0.8rem', background: 'transparent', border: '1px solid #ff5252', color: '#ff5252', borderRadius: '4px', cursor: 'pointer' }}>خروج</button>
-              </>
+              <div className="user-badge-box">
+                <span className="user-name font-bold text-cyan-300 flex items-center gap-1">
+                  <User size={16} /> {visitorName}
+                </span>
+                <button onClick={handleLogout} className="logout-btn-nav">
+                  <LogOut size={14} /> خروج
+                </button>
+              </div>
             ) : (
-              <Link to="/visitor-login" className="button primary small" style={{ padding: '5px 15px', fontSize: '0.9rem', borderRadius: '4px', background: '#00d2ff', color: '#07111f', fontWeight: 'bold', textDecoration: 'none' }}>تسجيل الدخول</Link>
+              <Link 
+                to="/visitor-login" 
+                className="login-btn-nav" 
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                تسجيل الدخول
+              </Link>
             )}
           </div>
         </div>

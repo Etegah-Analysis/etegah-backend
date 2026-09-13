@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 
 export default function LandingPage() {
   const [step, setStep] = useState(1);
@@ -126,6 +126,51 @@ export default function LandingPage() {
       }
 
       if (isVerified || currentCode === '123456' || currentCode.length === 6) {
+        // ضمان كتابة العميل مباشرة في Firestore من جهة العميل أيضاً (Client-side fallback)
+        try {
+          // 1. إضافة الزائر في visitor_customers
+          await addDoc(collection(db, 'visitor_customers'), {
+            firstName: visitorName || 'زائر جديد',
+            lastName: '',
+            email: email || '',
+            phone: fullPhone,
+            status: 'new',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+
+          // 2. إضافة الزائر في بيانات_تسجيل_العملاء ليظهر فوراً في CRM Dashboard
+          const cleanDocId = fullPhone.replace(/[^0-9]/g, '');
+          const crmDocRef = doc(db, 'بيانات_تسجيل_العملاء', cleanDocId);
+          const crmSnap = await getDoc(crmDocRef);
+
+          if (!crmSnap.exists()) {
+            await setDoc(crmDocRef, {
+              phoneNumber: fullPhone,
+              name: visitorName || 'زائر جديد',
+              email: email || '',
+              source: 'website',
+              assignedSender: 'website',
+              status: 'unassigned',
+              addedBy: 'website_otp',
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              lastMessage: 'سجّل عبر موقع اتجاه التحليل الذكي',
+              unread: 1
+            });
+          } else {
+            await updateDoc(crmDocRef, {
+              name: visitorName || crmSnap.data().name || 'زائر جديد',
+              source: 'website',
+              assignedSender: crmSnap.data().assignedSender || 'website',
+              updatedAt: serverTimestamp(),
+              unread: (crmSnap.data().unread || 0) + 1
+            });
+          }
+        } catch (fsErr) {
+          console.error("Client-side Firestore save warning:", fsErr);
+        }
+
         localStorage.setItem('visitorName', visitorName);
         localStorage.setItem('visitorPhone', fullPhone);
 

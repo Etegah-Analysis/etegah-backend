@@ -54,39 +54,56 @@ export default async function handler(req, res) {
     }
 
     if (verified) {
+      let cleanPhone = phone.toString().trim();
+      if (!cleanPhone.startsWith('+')) cleanPhone = `+${cleanPhone}`;
+
       // 2. Save visitor customer to Firestore etegah-dafe5 via Admin SDK
       if (dbAdmin) {
         try {
-          let cleanPhone = phone.toString().trim();
-          if (!cleanPhone.startsWith('+')) cleanPhone = `+${cleanPhone}`;
-
+          // أ) الحفظ في visitor_customers
           await dbAdmin.collection('visitor_customers').add({
             firstName: visitorName || 'زائر جديد',
             lastName: '',
             email: email || '',
             phone: cleanPhone,
             status: 'new',
-            source: 'website',
-            assignedSender: 'website',
             createdAt: new Date(),
             updatedAt: new Date()
           });
+          console.log('Saved visitor customer to etegah-dafe5 visitor_customers for phone:', cleanPhone);
 
-          // Also save/update in بيانات_تسجيل_العملاء for CRM Inbox
-          await dbAdmin.collection('بيانات_تسجيل_العملاء').add({
-            name: visitorName || 'عميل موقع',
-            phoneNumber: cleanPhone,
-            email: email || '',
-            status: 'unassigned',
-            source: 'website',
-            assignedSender: 'website',
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
+          // ب) الحفظ في بيانات_تسجيل_العملاء ليظهر فوراً في الـ CRM Dashboard والـ Inbox
+          const crmDocId = cleanPhone.replace(/[^0-9]/g, '');
+          const crmRef = dbAdmin.collection('بيانات_تسجيل_العملاء').doc(crmDocId);
+          const crmSnap = await crmRef.get();
 
-          console.log('Saved website visitor customer to etegah-dafe5 for phone:', cleanPhone);
+          if (!crmSnap.exists) {
+            await crmRef.set({
+              phoneNumber: cleanPhone,
+              name: visitorName || 'زائر جديد',
+              email: email || '',
+              source: 'website',
+              assignedSender: 'website',
+              status: 'unassigned',
+              addedBy: 'website_otp',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              lastMessage: 'سجّل عبر موقع اتجاه التحليل الذكي',
+              unread: 1
+            });
+            console.log('Saved website customer to بيانات_تسجيل_العملاء:', cleanPhone);
+          } else {
+            const existingData = crmSnap.data();
+            await crmRef.update({
+              name: visitorName || existingData.name || 'زائر جديد',
+              source: 'website',
+              assignedSender: existingData.assignedSender || 'website',
+              updatedAt: new Date(),
+              unread: (existingData.unread || 0) + 1
+            });
+          }
         } catch (saveErr) {
-          console.error('Error saving visitor_customers in verifyOtp:', saveErr.message);
+          console.error('Error saving in verifyOtp:', saveErr.message);
         }
       }
 
