@@ -655,6 +655,7 @@ const Dashboard = () => {
   // Call Performance Analytics States
   const [callLogs, setCallLogs] = useState([]);
   const [isCallsAnalysisModalOpen, setIsCallsAnalysisModalOpen] = useState(false);
+  const [callsAnalysisModalMode, setCallsAnalysisModalMode] = useState('auto'); // 'auto', 'personal', 'all'
   const [callsDateRangeFilter, setCallsDateRangeFilter] = useState('all'); // 'all', 'today', 'yesterday', 'week', 'month', 'custom'
   const [callsCustomDateFrom, setCallsCustomDateFrom] = useState('');
   const [callsCustomDateTo, setCallsCustomDateTo] = useState('');
@@ -1261,7 +1262,9 @@ const Dashboard = () => {
     return employees.find(e => 
       (e.uid && e.uid === realCurrentUser?.uid) || 
       (e.id && e.id === realCurrentUser?.uid) || 
-      (e.email && e.email?.toLowerCase() === realCurrentUser?.email?.toLowerCase())
+      (e.email && e.email?.toLowerCase() === realCurrentUser?.email?.toLowerCase()) ||
+      (e.authEmail && e.authEmail?.toLowerCase() === realCurrentUser?.email?.toLowerCase()) ||
+      (e.username && realCurrentUser?.email && realCurrentUser.email.toLowerCase().startsWith(e.username.toLowerCase() + '@'))
     );
   }, [realIsAdmin, impersonatedEmp, employees, realCurrentUser]);
 
@@ -1279,9 +1282,9 @@ const Dashboard = () => {
   // Automatic guard against disabled tabs when permissions change or are turned off
   useEffect(() => {
     if (isAdmin) return;
-    if (activeTab === 'saudi_signals' && (!hasPermission(currentEmpUser, 'show_card_saudi_stocks') || !hasPermission(currentEmpUser, 'canViewSaudiStocks'))) {
+    if (activeTab === 'saudi_signals' && (!hasPermission(currentEmpUser, 'show_card_saudi_stocks') && !hasPermission(currentEmpUser, 'canViewSaudiStocks'))) {
       setActiveTab('leads_crm');
-    } else if (activeTab === 'us_signals' && (!hasPermission(currentEmpUser, 'show_card_us_stocks') || !hasPermission(currentEmpUser, 'canViewUsStocks'))) {
+    } else if (activeTab === 'us_signals' && (!hasPermission(currentEmpUser, 'show_card_us_stocks') && !hasPermission(currentEmpUser, 'canViewUsStocks'))) {
       setActiveTab('leads_crm');
     } else if (activeTab === 'buffet_inventory' && (!hasPermission(currentEmpUser, 'show_card_buffet') || !hasPermission(currentEmpUser, 'canViewBuffet'))) {
       setActiveTab('leads_crm');
@@ -2587,11 +2590,11 @@ const Dashboard = () => {
 
     // Permissions verification for non-admin
     if (!isAdmin) {
-      if (type === 'saudi_signals' && (!hasPermission(currentEmpUser, 'show_card_saudi_stocks') || !hasPermission(currentEmpUser, 'canViewSaudiStocks'))) {
+      if (type === 'saudi_signals' && (!hasPermission(currentEmpUser, 'show_card_saudi_stocks') && !hasPermission(currentEmpUser, 'canViewSaudiStocks'))) {
         toast.error('غير مصرح لك بالوصول لتوصيات السوق السعودي 🔒');
         return;
       }
-      if (type === 'us_signals' && (!hasPermission(currentEmpUser, 'show_card_us_stocks') || !hasPermission(currentEmpUser, 'canViewUsStocks'))) {
+      if (type === 'us_signals' && (!hasPermission(currentEmpUser, 'show_card_us_stocks') && !hasPermission(currentEmpUser, 'canViewUsStocks'))) {
         toast.error('غير مصرح لك بالوصول لتوصيات السوق الأمريكي 🔒');
         return;
       }
@@ -4369,7 +4372,7 @@ const Dashboard = () => {
         const batch = writeBatch(db);
 
         for (const lead of batchChunk) {
-          const prevEmpName = employees.find(e => e.uid === lead.assignedToUid || e.email === lead.assignedTo)?.name || (lead.assignedTo === 'admin' || lead.assignedTo === 'الإدارة' ? '👑 الإدارة' : '👑 الإدارة');
+          const prevEmpName = employees.find(e => e.uid === lead.assignedToUid || e.email === lead.assignedTo)?.username || employees.find(e => e.uid === lead.assignedToUid || e.email === lead.assignedTo)?.name || (lead.assignedTo === 'admin' || lead.assignedTo === 'الإدارة' ? '👑 الإدارة' : '👑 الإدارة');
           const leadRef = doc(db, 'leads_crm', lead.id);
 
           if (isTargetAdmin) {
@@ -4436,7 +4439,7 @@ const Dashboard = () => {
     if (!lead) return;
     try {
       const currentEmp = employees.find(e => e.uid === lead.assignedToUid || e.email === lead.assignedTo);
-      const empName = currentEmp ? `👤 ${currentEmp.name}` : (lead.assignedTo || 'الموظف');
+      const empName = currentEmp ? `👤 ${currentEmp.username || currentEmp.name}` : (lead.assignedTo || 'الموظف');
       const assignerDisplay = `👑 ليدر الفريق (${currentEmpUser?.name || 'ليدر'})`;
       const logObj = createAssignmentLog(empName, `👑 ${currentEmpUser?.name || 'الليدر'}`, `سحب الداتا بواسطة الليدر (${currentEmpUser?.name || 'ليدر'})`);
 
@@ -4493,7 +4496,7 @@ const Dashboard = () => {
           for (const leadId of chunk) {
             const lead = leadsCrm.find(l => l.id === leadId);
             const currentEmp = employees.find(e => e.uid === lead?.assignedToUid || e.email === lead?.assignedTo);
-            const empName = currentEmp ? `👤 ${currentEmp.name}` : (lead?.assignedTo || 'الموظف');
+            const empName = currentEmp ? `👤 ${currentEmp.username || currentEmp.name}` : (lead?.assignedTo || 'الموظف');
             const logObj = createAssignmentLog(empName, `👑 ${currentEmpUser?.name || 'الليدر'}`, `سحب الداتا بواسطة الليدر (${currentEmpUser?.name || 'ليدر'})`);
 
             batch.update(doc(db, 'leads_crm', leadId), {
@@ -4551,7 +4554,7 @@ const Dashboard = () => {
           const batch = writeBatch(db);
           for (const lead of chunk) {
             const currentEmp = employees.find(e => e.uid === lead.assignedToUid || e.email === lead.assignedTo);
-            const empName = currentEmp ? `👤 ${currentEmp.name}` : (lead.assignedTo || 'الموظف');
+            const empName = currentEmp ? `👤 ${currentEmp.username || currentEmp.name}` : (lead.assignedTo || 'الموظف');
             const logObj = createAssignmentLog(empName, `👑 ${currentEmpUser?.name || 'الليدر'}`, `سحب الداتا بواسطة الليدر (${currentEmpUser?.name || 'ليدر'})`);
 
             batch.update(doc(db, 'leads_crm', lead.id), {
@@ -4580,7 +4583,7 @@ const Dashboard = () => {
     if (!customer) return;
     try {
       const currentEmp = employees.find(e => e.uid === customer.assignedToUid || e.email === customer.assignedTo);
-      const prevEmpName = currentEmp ? `👤 ${currentEmp.name}` : (customer.assignedTo || 'الموظف');
+      const prevEmpName = currentEmp ? `👤 ${currentEmp.username || currentEmp.name}` : (customer.assignedTo || 'الموظف');
       const assignerDisplay = isAdmin ? '👑 الإدارة' : `👑 ليدر الفريق (${currentEmpUser?.name || 'ليدر'})`;
       const assignerRole = isAdmin ? 'admin' : 'leader';
       const assignerUid = isAdmin ? 'admin' : (currentUser?.uid || '');
@@ -4661,7 +4664,7 @@ const Dashboard = () => {
           for (const leadId of chunk) {
             const customer = employeeLeads.find(l => l.id === leadId);
             const currentEmp = employees.find(e => e.uid === customer?.assignedToUid || e.email === customer?.assignedTo);
-            const prevEmpName = currentEmp ? `👤 ${currentEmp.name}` : (customer?.assignedTo || 'الموظف');
+            const prevEmpName = currentEmp ? `👤 ${currentEmp.username || currentEmp.name}` : (customer?.assignedTo || 'الموظف');
             const logObj = createAssignmentLog(prevEmpName, assignerDisplay, `سحب الداتا بواسطة ${assignerDisplay}`);
 
             batch.update(doc(db, 'employee_leads', leadId), {
@@ -5325,7 +5328,7 @@ const Dashboard = () => {
         empCode: newEmpCode || '',
         jobTitle: newEmpJobTitle || 'Agent',
         leaderUid: leaderObj ? leaderObj.uid : '',
-        leaderName: leaderObj ? (leaderObj.name || leaderObj.username) : '',
+        leaderName: leaderObj ? (leaderObj.username || leaderObj.name) : '',
         leaderAssignedAt: leaderObj ? serverTimestamp() : null,
         role: 'employee',
         isActive: true,
@@ -5361,7 +5364,8 @@ const Dashboard = () => {
     setLoadingEdit(true);
     setErrorEdit('');
     try {
-      const emailToCreate = editEmpUsername.includes('@') ? editEmpUsername.trim() : `${editEmpUsername.trim()}@etegah.com`;
+      const safeUsername = editEmpUsername.trim().replace(/\s+/g, '').toLowerCase();
+      const emailToCreate = editEmpUsername.includes('@') ? editEmpUsername.trim().toLowerCase() : `${safeUsername}@etegah.com`;
       const leaderObj = editEmpJobTitle === 'Agent' && editEmpLeaderUid ? employees.find(l => l.uid === editEmpLeaderUid) : null;
       const currentLeaderUid = editEmp.leaderUid || '';
       const newLeaderUid = leaderObj ? leaderObj.uid : '';
@@ -5384,7 +5388,7 @@ const Dashboard = () => {
         jobTitle: editEmpJobTitle || 'Agent',
         role: normalizedRole,
         leaderUid: newLeaderUid,
-        leaderName: leaderObj ? (leaderObj.name || leaderObj.username) : ''
+        leaderName: leaderObj ? (leaderObj.username || leaderObj.name) : ''
       };
 
       if (isLeaderChanged) {
@@ -5394,14 +5398,37 @@ const Dashboard = () => {
       // 1. Update Firestore document directly (Always succeeds!)
       await setDoc(doc(db, 'users', editEmp.uid), updateData, { merge: true });
 
-      // 2. Try updating Auth password / email in background if secondary auth credentials exist
+            // 2. Try updating Auth password / email in background using secondaryAuth
       try {
-        if (editEmp.email && editEmp.password) {
-          await signInWithEmailAndPassword(secondaryAuth, editEmp.email, editEmp.password);
+        const candidateAuthEmails = [];
+        const pushAuthEmail = (em) => {
+          if (em) {
+            const clean = em.trim().toLowerCase().replace(/\s+/g, '');
+            if (clean && !candidateAuthEmails.includes(clean)) candidateAuthEmails.push(clean);
+          }
+        };
+
+        pushAuthEmail(editEmp.authEmail);
+        pushAuthEmail(editEmp.email);
+        pushAuthEmail(emailToCreate);
+        if (editEmp.username) pushAuthEmail(`${editEmp.username.replace(/\s+/g, '')}@etegah.com`);
+        if (editEmp.name) pushAuthEmail(`${editEmp.name.replace(/\s+/g, '')}@etegah.com`);
+
+        let secCred = null;
+        for (const authEm of candidateAuthEmails) {
+          try {
+            secCred = await signInWithEmailAndPassword(secondaryAuth, authEm, editEmp.password);
+            if (secCred) break;
+          } catch (e) {
+            // try next candidate email
+          }
+        }
+
+        if (secCred && secondaryAuth.currentUser) {
           if (editEmpPassword !== editEmp.password && editEmpPassword.length >= 6) {
             await updatePassword(secondaryAuth.currentUser, editEmpPassword);
           }
-          if (emailToCreate !== editEmp.email) {
+          if (emailToCreate.toLowerCase() !== secondaryAuth.currentUser.email?.toLowerCase()) {
             await updateEmail(secondaryAuth.currentUser, emailToCreate);
           }
           secondaryAuth.signOut();
@@ -5696,11 +5723,12 @@ const Dashboard = () => {
       return;
     }
     try {
-      const { originalCollection, type, deletedAt, deletedBy, id, ...restData } = item;
-      const targetCol = originalCollection || (type === 'employee' ? 'users' : type === 'visitor' ? 'visitor_customers' : type === 'email' ? 'internal_emails' : 'بيانات_تسجيل_العملاء');
-      await setDoc(doc(db, targetCol, item.id), restData);
+      const { originalCollection, type, source, itemType, deletedAt, deletedBy, deletedAtFormatted, data, name, title, id, status, ...restData } = item;
+      const targetCol = originalCollection || item.source || (type === 'saudi_recommendations' ? 'saudi_recommendations' : type === 'us_recommendations' ? 'us_recommendations' : type === 'employee' ? 'users' : type === 'visitor' ? 'visitor_customers' : type === 'email' ? 'internal_emails' : 'بيانات_تسجيل_العملاء');
+      const restoreObj = data || restData;
+      await setDoc(doc(db, targetCol, item.id), restoreObj);
       await deleteDoc(doc(db, 'recycle_bin', item.id));
-      toast.success(`تم استرجاع (${item.name || item.subject || item.phoneNumber || 'العنصر'}) بنجاح 🔄`);
+      toast.success(`تم استرجاع (${item.title || item.name || item.subject || item.phoneNumber || 'العنصر'}) بنجاح 🔄`);
     } catch (e) {
       console.error(e);
       toast.error('حدث خطأ أثناء استرجاع العنصر');
@@ -5821,7 +5849,7 @@ const Dashboard = () => {
     if (!empUid) return;
     try {
       const customer = customers.find(c => c.id === chatId);
-      const prevEmpName = employees.find(e => e.uid === customer?.assignedToUid || e.email === customer?.assignedTo)?.name || (customer?.assignedTo === 'admin' || customer?.assignedTo === 'الإدارة' ? '👑 الإدارة' : '👑 الإدارة');
+      const prevEmpName = employees.find(e => e.uid === customer?.assignedToUid || e.email === customer?.assignedTo)?.username || employees.find(e => e.uid === customer?.assignedToUid || e.email === customer?.assignedTo)?.name || (customer?.assignedTo === 'admin' || customer?.assignedTo === 'الإدارة' ? '👑 الإدارة' : '👑 الإدارة');
       const assignerDisplay = getAssignerDisplay();
       const assignerRole = getAssignerRole();
       const assignerUid = isAdmin ? 'admin' : (currentUser?.uid || '');
@@ -5905,7 +5933,7 @@ const Dashboard = () => {
     try {
       const excelData = leadsCrm.map((lead, idx) => {
         const emp = employees.find(e => e.uid === lead.assignedToUid || e.email?.toLowerCase() === lead.assignedTo?.toLowerCase());
-        const empName = emp ? (emp.name || emp.username) : (lead.assignedTo === 'admin' || lead.assignedTo === 'الإدارة' ? '👑 الإدارة' : 'غير محدد');
+        const empName = emp ? (emp.username || emp.name) : (lead.assignedTo === 'admin' || lead.assignedTo === 'الإدارة' ? '👑 الإدارة' : 'غير محدد');
         const statusLabel = CRM_STATUS_MAP[lead.crmStatus]?.label || lead.crmStatus || '⏳ في الانتظار';
         
         let compiledNotes = '';
@@ -5954,7 +5982,7 @@ const Dashboard = () => {
     try {
       const excelData = employeeLeads.map((lead, idx) => {
         const emp = employees.find(e => e.uid === lead.assignedToUid || e.email?.toLowerCase() === lead.assignedTo?.toLowerCase());
-        const empName = emp ? (emp.name || emp.username) : (lead.assignedTo === 'admin' || lead.assignedTo === 'الإدارة' ? '👑 الإدارة' : (lead.assignedTo || 'غير محدد'));
+        const empName = emp ? (emp.username || emp.name) : (lead.assignedTo === 'admin' || lead.assignedTo === 'الإدارة' ? '👑 الإدارة' : (lead.assignedTo || 'غير محدد'));
         const statusLabel = CRM_STATUS_MAP[lead.crmStatus]?.label || lead.crmStatus || '⏳ في الانتظار';
         
         let compiledNotes = '';
@@ -6603,6 +6631,52 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
     return null;
   };
 
+  const calculateSaudiGainValue = (signal) => {
+    const sup1 = parseFloat(String(signal.support1 || '').replace(/[^0-9.]/g, ''));
+    if (!sup1 || isNaN(sup1) || sup1 <= 0) return null;
+
+    let exitPrice = null;
+    if (signal.status === 'target1') {
+      exitPrice = parseFloat(String(signal.resistance1 || '').replace(/[^0-9.]/g, ''));
+    } else if (signal.status === 'target2') {
+      exitPrice = parseFloat(String(signal.resistance2 || '').replace(/[^0-9.]/g, ''));
+    } else if (signal.status === 'target3') {
+      exitPrice = parseFloat(String(signal.resistance3 || '').replace(/[^0-9.]/g, ''));
+    } else if (signal.status === 'target4') {
+      exitPrice = parseFloat(String(signal.resistance4 || '').replace(/[^0-9.]/g, ''));
+    } else if (signal.status === 'stop_loss') {
+      exitPrice = parseFloat(String(signal.stopLoss || '').replace(/[^0-9.]/g, ''));
+    }
+
+    if (exitPrice !== null && !isNaN(exitPrice)) {
+      return exitPrice - sup1;
+    }
+    return null;
+  };
+
+  const calculateUsGainValue = (signal) => {
+    const buyMatch = String(signal.buyPrice || '').replace(/,/g, '.').match(/\d+(?:\.\d+)?/);
+    const buy = buyMatch ? parseFloat(buyMatch[0]) : NaN;
+    if (!buy || isNaN(buy) || buy <= 0) return null;
+
+    let exitPrice = null;
+    if (signal.status === 'target1') {
+      const t1Match = String(signal.target1 || '').replace(/,/g, '.').match(/\d+(?:\.\d+)?/);
+      exitPrice = t1Match ? parseFloat(t1Match[0]) : NaN;
+    } else if (signal.status === 'target2') {
+      const t2Match = String(signal.target2 || '').replace(/,/g, '.').match(/\d+(?:\.\d+)?/);
+      exitPrice = t2Match ? parseFloat(t2Match[0]) : NaN;
+    } else if (signal.status === 'stop_loss') {
+      const slMatch = String(signal.stopLoss || '').replace(/,/g, '.').match(/\d+(?:\.\d+)?/);
+      exitPrice = slMatch ? parseFloat(slMatch[0]) : NaN;
+    }
+
+    if (exitPrice !== null && !isNaN(exitPrice)) {
+      return exitPrice - buy;
+    }
+    return null;
+  };
+
   const calculateUsPercentage = (signal) => {
     const buyMatch = String(signal.buyPrice || '').replace(/,/g, '.').match(/\d+(?:\.\d+)?/);
     const buy = buyMatch ? parseFloat(buyMatch[0]) : NaN;
@@ -7107,11 +7181,25 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
   };
 
   const handleDeleteSaudiSignal = async (signalId) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه التوصية نهائياً؟')) return;
+    if (!isAdmin && !hasPermission(currentEmpUser, 'canDeleteSaudiStocks')) {
+      toast.error('غير مصرح لك بحذف توصيات السوق السعودي 🔒');
+      return;
+    }
+    const item = saudiRecommendations.find(s => s.id === signalId);
+    if (!item) return;
+    if (!window.confirm(`هل أنت متأكد من مسح توصية (${item.stockName || item.stockCode || 'السهم'}) ونقلها لسلة المهملات لدى الإدارة؟`)) return;
+
     try {
+      // 1. Optimistic UI update
+      setSaudiRecommendations(prev => prev.filter(s => s.id !== signalId));
+      setSelectedSaudiIds(prev => prev.filter(x => x !== signalId));
+      toast.success('تم نقل التوصية إلى سلة المهملات لدى الإدارة بنجاح 🗑️✨');
+
+      // 2. Archive to recycle_bin & delete from saudi_recommendations
+      await handleSoftArchiveToRecycleBin([item], 'saudi_recommendations', 'توصيات السوق السعودي');
       await deleteDoc(doc(db, 'saudi_recommendations', signalId));
-      toast.success('تم حذف التوصية بنجاح 🗑️');
     } catch (err) {
+      console.error(err);
       toast.error('حدث خطأ أثناء الحذف');
     }
   };
@@ -7485,20 +7573,34 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
 
   // --- V2.26 BULK DELETION & RECYCLE BIN ARCHIVING ---
   const handleSoftArchiveToRecycleBin = async (items, sourceKey, sourceTitle) => {
-    const userRole = isAdmin ? '👑 الإدارة' : isCoordinator ? `📋 منسق الإدارة (${currentEmpUser?.name || 'منسق'})` : (currentEmpUser?.name || 'موظف');
+    const userRole = isAdmin 
+      ? '👑 الإدارة' 
+      : isCoordinator 
+        ? `📋 منسق الإدارة (${currentEmpUser?.name || 'منسق'})` 
+        : (currentEmpUser?.jobTitle === 'Customer Service' || currentEmpUser?.role === 'customer_service')
+          ? `${currentEmpUser?.name || 'موظف'} (خدمة عملاء)`
+          : `${currentEmpUser?.name || 'موظف'}`;
     const now = new Date().toISOString();
 
     const promises = items.map(item => {
       const binId = `recycle_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      const titleStr = item.stockName 
+        ? `${item.stockName} (${item.stockCode || ''})` 
+        : item.symbol 
+          ? `${item.symbol} (${item.marketType === 'options' ? 'عقد خيارات' : 'سهم أمريكي'})` 
+          : item.empName || item.name || 'سجل محذوف';
+
       return setDoc(doc(db, 'recycle_bin', binId), {
         id: binId,
         source: sourceKey,
         sourceTitle: sourceTitle,
         itemType: sourceKey,
-        title: item.stockName || item.symbol || item.empName || item.name || 'سجل محذوف',
+        type: sourceKey,
+        title: titleStr,
+        name: titleStr,
         deletedBy: userRole,
         deletedAt: now,
-        deletedAtFormatted: new Date().toLocaleDateString('ar-EG') + ' • ' + new Date().toLocaleTimeString('ar-EG'),
+        deletedAtFormatted: new Date().toLocaleDateString('ar-EG') + ' • ' + new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
         data: item,
         status: 'archived'
       });
@@ -8025,6 +8127,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               <th>${isSaudi ? 'مقاومة 2' : 'الهدف 2 (T2)'}</th>
               <th>وقف الخسارة (SL)</th>
               <th>حالة التوصية</th>
+              <th>${isSaudi ? 'المكسب (ر.س)' : 'المكسب ($)'}</th>
               <th>نسبة الإنجاز %</th>
               <th>وقت الرفع</th>
             </tr>
@@ -8042,7 +8145,8 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                   <td>${isSaudi ? (sig.resistance2 || '-') : (sig.target2 || '-')}</td>
                   <td style="color:#e11d48; font-weight:bold;">${sig.stopLoss || '-'}</td>
                   <td><span class="badge ${badgeClass}">${statusLbl}</span></td>
-                  <td style="font-weight:bold; color:#047857;">${isSaudi ? calculateSaudiPercentage(sig).label : calculateUsPercentage(sig).label}</td>
+                  <td style="font-weight:bold; font-family:monospace; color:${(isSaudi ? calculateSaudiGainValue(sig) : calculateUsGainValue(sig)) >= 0 ? '#047857' : '#e11d48'};">${(() => { const g = isSaudi ? calculateSaudiGainValue(sig) : calculateUsGainValue(sig); return g !== null ? (g >= 0 ? '+' + g.toFixed(2) : g.toFixed(2)) + (isSaudi ? ' ر.س' : ' $') : '-'; })()}</td>
+                  <td style="font-weight:bold; color:#047857;">${(() => { const p = isSaudi ? calculateSaudiPercentage(sig) : calculateUsPercentage(sig); return p !== null ? (p >= 0 ? '+' + p.toFixed(2) + '%' : p.toFixed(2) + '%') : '-'; })()}</td>
                   <td>${sig.uploadedAtFormatted || '-'}</td>
                 </tr>
               `;
@@ -8370,11 +8474,25 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
   };
 
   const handleDeleteUsSignal = async (signalId) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه التوصية نهائياً؟')) return;
+    if (!isAdmin && !hasPermission(currentEmpUser, 'canDeleteUsStocks')) {
+      toast.error('غير مصرح لك بحذف توصيات السوق الأمريكي 🔒');
+      return;
+    }
+    const item = usRecommendations.find(s => s.id === signalId);
+    if (!item) return;
+    if (!window.confirm(`هل أنت متأكد من مسح توصية (${item.symbol || 'السهم'}) ونقلها لسلة المهملات لدى الإدارة؟`)) return;
+
     try {
+      // 1. Optimistic UI update
+      setUsRecommendations(prev => prev.filter(s => s.id !== signalId));
+      setSelectedUsIds(prev => prev.filter(x => x !== signalId));
+      toast.success('تم نقل التوصية إلى سلة المهملات لدى الإدارة بنجاح 🗑️✨');
+
+      // 2. Archive to recycle_bin & delete from us_recommendations
+      await handleSoftArchiveToRecycleBin([item], 'us_recommendations', 'توصيات السوق الأمريكي');
       await deleteDoc(doc(db, 'us_recommendations', signalId));
-      toast.success('تم حذف التوصية بنجاح 🗑️');
     } catch (err) {
+      console.error(err);
       toast.error('حدث خطأ أثناء الحذف');
     }
   };
@@ -8394,7 +8512,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
     try {
       const excelData = scopeList.map((client, idx) => {
         const emp = employees.find(e => e.uid === client.assignedToUid || e.email?.toLowerCase() === client.assignedTo?.toLowerCase());
-        const empName = emp ? (emp.name || emp.username) : (client.assignedTo === 'admin' || client.assignedTo === 'الإدارة' ? '👑 الإدارة' : (client.assignedTo || 'غير محدد'));
+        const empName = emp ? (emp.username || emp.name) : (client.assignedTo === 'admin' || client.assignedTo === 'الإدارة' ? '👑 الإدارة' : (client.assignedTo || 'غير محدد'));
         const sub = client.subscriptionDetails || {};
 
         let paymentLabel = 'غير محدد';
@@ -8749,13 +8867,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
   // --- CALL PERFORMANCE ANALYTICS COMPUTATIONS ---
   const roleFilteredCallLogs = useMemo(() => {
     return callLogs.filter(log => {
-      if (isAdmin || isCoordinator) return true;
+      if (isAdmin || isCoordinator || isCustomerService) return true;
       if (isLeader) {
         return log.employeeUid === currentUser?.uid || log.leaderUid === currentUser?.uid || myTeamMembers.some(m => m.uid === log.employeeUid);
       }
       return log.employeeUid === currentUser?.uid;
     });
-  }, [callLogs, isAdmin, isCoordinator, isLeader, currentUser?.uid, myTeamMembers]);
+  }, [callLogs, isAdmin, isCoordinator, isCustomerService, isLeader, currentUser?.uid, myTeamMembers]);
 
   const todayCallLogsCount = useMemo(() => {
     const todayDateStr = new Date().toISOString().split('T')[0];
@@ -8973,11 +9091,32 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               <img src="/logo.jpg" alt="Logo" className="relative w-4 h-4 rounded-full object-cover border border-amber-300" />
             </div>
             <span className="text-[11px] sm:text-xs font-black text-amber-200 truncate max-w-[90px] sm:max-w-[130px]">
-              {isAdmin ? 'الإدارة' : (employees.find(e => e.uid === currentUser?.uid || e.email?.toLowerCase() === currentUser?.email?.toLowerCase())?.name || 'موظف')}
+              {(() => {
+                if (impersonatedEmp) return impersonatedEmp.name || impersonatedEmp.username;
+                if (effectiveEmpUser?.name || effectiveEmpUser?.username) return effectiveEmpUser.name || effectiveEmpUser.username;
+                const emp = employees.find(e => 
+                  (e.uid && e.uid === currentUser?.uid) || 
+                  (e.id && e.id === currentUser?.uid) || 
+                  (e.email && e.email?.toLowerCase() === currentUser?.email?.toLowerCase()) ||
+                  (e.authEmail && e.authEmail?.toLowerCase() === currentUser?.email?.toLowerCase()) ||
+                  (e.username && currentUser?.email && currentUser.email.toLowerCase().startsWith(e.username.toLowerCase() + '@'))
+                );
+                if (emp?.name || emp?.username) return emp.name || emp.username;
+                if (isAdmin) return 'الإدارة';
+                if (currentUser?.displayName) return currentUser.displayName;
+                if (currentUser?.email) return currentUser.email.split('@')[0];
+                return 'موظف';
+              })()}
             </span>
             <span className="bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-950 text-[9px] sm:text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-sm whitespace-nowrap">
               {isAdmin ? '👑 Admin' : (() => {
-                const emp = employees.find(e => e.uid === currentUser?.uid || e.email?.toLowerCase() === currentUser?.email?.toLowerCase());
+                const emp = effectiveEmpUser || employees.find(e => 
+                  (e.uid && e.uid === currentUser?.uid) || 
+                  (e.id && e.id === currentUser?.uid) || 
+                  (e.email && e.email?.toLowerCase() === currentUser?.email?.toLowerCase()) ||
+                  (e.authEmail && e.authEmail?.toLowerCase() === currentUser?.email?.toLowerCase()) ||
+                  (e.username && currentUser?.email && currentUser.email.toLowerCase().startsWith(e.username.toLowerCase() + '@'))
+                );
                 const r = emp?.jobTitle || emp?.role || 'Agent';
                 return getJobTitleEnglish(r);
               })()}
@@ -9612,7 +9751,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
 
               {/* Card 11: Call Performance Analytics (تحليل أداء المكالمات) */}
               <div 
-                onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setCallsAnalysisModalMode('all'); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                 className="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white rounded-xl sm:rounded-2xl shadow-[0_6px_20px_rgba(147,51,234,0.35)] min-h-[85px] sm:min-h-[96px] md:min-h-[104px] p-3 sm:p-4 md:p-4.5 border border-amber-400/50 md:hover:border-amber-300 md:hover:scale-105 md:hover:shadow-[0_8px_25px_rgba(245,158,11,0.35)] flex items-center cursor-pointer transition-all transform"
                 title="انقر لعرض تقرير وتحليل أداء مكالمات الموظفين اليومية والتراكمية"
               >
@@ -9655,10 +9794,18 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                   <SaudiFlagIcon className="w-7 h-7 sm:w-8 sm:h-8" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] sm:text-xs md:text-sm text-amber-200 font-extrabold mb-0 leading-snug break-words inline-flex items-center gap-1.5">
+                  <p className="text-[11px] sm:text-xs md:text-sm text-amber-200 font-extrabold mb-1 leading-snug break-words inline-flex items-center gap-1.5">
                     <SaudiFlagIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span>توصيات السوق السعودي</span>
                   </p>
+                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-block px-3 py-0.5 rounded-full border border-amber-500/90 bg-amber-950/70 text-amber-300 font-black text-sm shadow-sm" dir="ltr">
+                      {saudiRecommendations.length.toLocaleString()} توصية
+                    </span>
+                    <span className="text-[11px] text-amber-400 font-bold">
+                      ({saudiRecommendations.filter(s => s.status === 'active').length} سارية ⏳)
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -9672,10 +9819,18 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                   <UsFlagIcon className="w-7 h-7 sm:w-8 sm:h-8" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] sm:text-xs md:text-sm text-amber-200 font-extrabold mb-0 leading-snug break-words inline-flex items-center gap-1.5">
+                  <p className="text-[11px] sm:text-xs md:text-sm text-amber-200 font-extrabold mb-1 leading-snug break-words inline-flex items-center gap-1.5">
                     <UsFlagIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span>توصيات السوق الأمريكي</span>
                   </p>
+                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-block px-3 py-0.5 rounded-full border border-amber-500/90 bg-amber-950/70 text-amber-300 font-black text-sm shadow-sm" dir="ltr">
+                      {usRecommendations.length.toLocaleString()} توصية
+                    </span>
+                    <span className="text-[11px] text-amber-400 font-bold">
+                      ({usRecommendations.filter(s => s.status === 'active').length} سارية ⏳)
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -9851,7 +10006,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               )}
               {hasPermission(currentEmpUser, 'show_card_calls_analytics') && (
               <div 
-                onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setCallsAnalysisModalMode('all'); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                 className="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white rounded-xl sm:rounded-2xl shadow-[0_6px_20px_rgba(147,51,234,0.35)] min-h-[85px] sm:min-h-[96px] md:min-h-[104px] p-3 sm:p-4 md:p-4.5 border border-amber-400/50 md:hover:border-amber-300 md:hover:scale-105 md:hover:shadow-[0_8px_25px_rgba(245,158,11,0.35)] flex items-center cursor-pointer transition-all transform"
                 title="انقر لعرض تقرير وتحليل أداء مكالمات الموظفين اليومية والتراكمية"
               >
@@ -9917,6 +10072,14 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       <SaudiFlagIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span>توصيات السوق السعودي</span>
                     </p>
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-block px-3 py-0.5 rounded-full border border-amber-500/90 bg-amber-950/70 text-amber-300 font-black text-sm shadow-sm" dir="ltr">
+                        {saudiRecommendations.length.toLocaleString()} توصية
+                      </span>
+                      <span className="text-[11px] text-amber-400 font-bold">
+                        ({saudiRecommendations.filter(s => s.status === 'active').length} سارية ⏳)
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -9936,6 +10099,14 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       <UsFlagIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span>توصيات السوق الأمريكي</span>
                     </p>
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-block px-3 py-0.5 rounded-full border border-amber-500/90 bg-amber-950/70 text-amber-300 font-black text-sm shadow-sm" dir="ltr">
+                        {usRecommendations.length.toLocaleString()} توصية
+                      </span>
+                      <span className="text-[11px] text-amber-400 font-bold">
+                        ({usRecommendations.filter(s => s.status === 'active').length} سارية ⏳)
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -10100,7 +10271,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               )}
               {hasPermission(currentEmpUser, 'show_card_calls_analytics') && (
                   <div 
-                    onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                    onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setCallsAnalysisModalMode('auto'); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                     className="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white rounded-xl sm:rounded-2xl shadow-[0_6px_20px_rgba(147,51,234,0.35)] min-h-[85px] sm:min-h-[96px] md:min-h-[104px] p-3 sm:p-4 md:p-4.5 border border-amber-400/50 md:hover:border-amber-300 md:hover:scale-105 md:hover:shadow-[0_8px_25px_rgba(245,158,11,0.35)] flex items-center cursor-pointer transition-all transform"
                     title="انقر لعرض تقرير وتحليل أداء مكالماتك ومكالمات فريقك"
                   >
@@ -10253,7 +10424,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               )}
               {hasPermission(currentEmpUser, 'show_card_calls_analytics') && (
                     <div 
-                      onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                      onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setCallsAnalysisModalMode('personal'); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                       className="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white rounded-xl sm:rounded-2xl shadow-[0_6px_20px_rgba(147,51,234,0.35)] min-h-[85px] sm:min-h-[96px] md:min-h-[104px] p-3 sm:p-4 md:p-4.5 border border-amber-400/50 md:hover:border-amber-300 md:hover:scale-105 md:hover:shadow-[0_8px_25px_rgba(245,158,11,0.35)] flex items-center cursor-pointer transition-all transform"
                       title="انقر لعرض تقرير وتحليل أداء مكالماتك اليوم"
                     >
@@ -10415,7 +10586,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               )}
               {hasPermission(currentEmpUser, 'show_card_calls_analytics') && (
                     <div 
-                      onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                      onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setCallsAnalysisModalMode('all'); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                       className="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white rounded-xl sm:rounded-2xl shadow-[0_6px_20px_rgba(147,51,234,0.35)] min-h-[85px] sm:min-h-[96px] md:min-h-[104px] p-3 sm:p-4 md:p-4.5 border border-cyan-400/50 md:hover:border-cyan-300 md:hover:scale-105 md:hover:shadow-[0_8px_25px_rgba(6,182,212,0.35)] flex items-center cursor-pointer transition-all transform"
                       title="انقر لمتابعة وتحليل سجل مكالمات كافة موظفي المنصة اليوم"
                     >
@@ -10572,7 +10743,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               )}
               {hasPermission(currentEmpUser, 'show_card_calls_analytics') && (
                   <div 
-                    onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
+                    onClick={(e) => { if (e && e.stopPropagation) e.stopPropagation(); setCallsAnalysisModalMode('personal'); setIsCallsAnalysisModalOpen(true); }} style={{ touchAction: 'manipulation', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
                     className="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white rounded-xl sm:rounded-2xl shadow-[0_6px_20px_rgba(147,51,234,0.35)] min-h-[85px] sm:min-h-[96px] md:min-h-[104px] p-3 sm:p-4 md:p-4.5 border border-amber-400/50 md:hover:border-amber-300 md:hover:scale-105 md:hover:shadow-[0_8px_25px_rgba(245,158,11,0.35)] flex items-center cursor-pointer transition-all transform"
                     title="انقر لعرض تقرير وتحليل أداء مكالماتك اليوم"
                   >
@@ -11122,7 +11293,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                             <td className="p-3.5">
                               <span className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-800 font-bold px-2.5 py-1 rounded-full text-xs shadow-sm">
                                 <span>👤</span>
-                                <span>{assignedEmp?.name || customer.assignedTo || 'Team Member'} ({getJobTitleEnglish(assignedEmp?.jobTitle)})</span>
+                                <span>{assignedEmp?.username || assignedEmp?.name || customer.assignedTo || 'Team Member'} ({getJobTitleEnglish(assignedEmp?.jobTitle)})</span>
                               </span>
                             </td>
                             <td className="px-2 py-2 text-center text-gray-500 text-[11px] font-mono whitespace-nowrap">
@@ -11722,7 +11893,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                   value={isLeadWithAdmin(customer) ? "admin" : customer.assignedToUid}
                                   onChange={async (e) => {
                                     const uid = e.target.value;
-                                    const prevEmpName = employees.find(e => e.uid === customer.assignedToUid || e.email === customer.assignedTo)?.name || '👑 الإدارة';
+                                    const prevEmpName = employees.find(e => e.uid === customer.assignedToUid || e.email === customer.assignedTo)?.username || employees.find(e => e.uid === customer.assignedToUid || e.email === customer.assignedTo)?.name || '👑 الإدارة';
                                     const assignerDisplay = getAssignerDisplay();
                                     const assignerRole = getAssignerRole();
                                     const assignerUid = isAdmin ? 'admin' : (currentUser?.uid || '');
@@ -11780,7 +11951,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                       <option value="admin">👑 الإدارة (Admin 👑)</option>
                                       {assignableEmployees.map(emp => (
                                         <option key={emp.uid} value={emp.uid}>
-                                          👤 {emp.name} ({getJobTitleEnglish(emp.jobTitle)}{emp.leaderName ? ` - Team ${emp.leaderName}` : ''})
+                                          👤 {emp.username || emp.name} ({getJobTitleEnglish(emp.jobTitle)}{emp.leaderName ? ` - Team ${emp.leaderName}` : ''})
                                         </option>
                                       ))}
                                     </>
@@ -12401,7 +12572,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                       value={isLeadWithAdmin(customer) ? "admin" : customer.assignedToUid}
                                       onChange={async (e) => {
                                         const uid = e.target.value;
-                                        const prevEmpName = employees.find(e => e.uid === customer.assignedToUid || e.email === customer.assignedTo)?.name || (customer.assignedTo === 'admin' || customer.assignedTo === 'الإدارة' ? '👑 الإدارة' : '👑 الإدارة');
+                                        const prevEmpName = employees.find(e => e.uid === customer.assignedToUid || e.email === customer.assignedTo)?.username || employees.find(e => e.uid === customer.assignedToUid || e.email === customer.assignedTo)?.name || (customer.assignedTo === 'admin' || customer.assignedTo === 'الإدارة' ? '👑 الإدارة' : '👑 الإدارة');
                                         const assignerDisplay = getAssignerDisplay();
                                         const assignerRole = getAssignerRole();
                                         const assignerUid = isAdmin ? 'admin' : (currentUser?.uid || '');
@@ -12457,7 +12628,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                           <option value="admin">👑 الإدارة (Admin 👑)</option>
                                           {assignableEmployees.map(emp => (
                                             <option key={emp.uid} value={emp.uid}>
-                                              👤 {emp.name || emp.username} ({getJobTitleEnglish(emp.jobTitle)}{emp.leaderName ? ` - Team ${emp.leaderName}` : ''})
+                                              👤 {emp.username || emp.name} ({getJobTitleEnglish(emp.jobTitle)}{emp.leaderName ? ` - Team ${emp.leaderName}` : ''})
                                             </option>
                                           ))}
                                         </>
@@ -13047,7 +13218,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                             const sub = customer.subscriptionDetails || {};
                             const hasCompleteSub = sub.startDate && sub.receiptProof;
                             const emp = employees.find(e => e.uid === customer.assignedToUid || e.email?.toLowerCase() === customer.assignedTo?.toLowerCase());
-                            const empName = emp ? (emp.name || emp.username) : (customer.assignedTo === 'admin' || customer.assignedTo === 'الإدارة' ? '👑 الإدارة' : (customer.assignedTo || 'غير محدد'));
+                            const empName = emp ? (emp.username || emp.name) : (customer.assignedTo === 'admin' || customer.assignedTo === 'الإدارة' ? '👑 الإدارة' : (customer.assignedTo || 'غير محدد'));
 
                             return (
                               <tr key={customer.id || idx} className="hover:bg-emerald-50/40 transition">
@@ -13080,7 +13251,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                       value={isLeadWithAdmin(customer) ? "admin" : customer.assignedToUid}
                                       onChange={async (e) => {
                                         const uid = e.target.value;
-                                        const prevEmpName = employees.find(x => x.uid === customer.assignedToUid || x.email === customer.assignedTo)?.name || '👑 الإدارة';
+                                        const prevEmpName = employees.find(x => x.uid === customer.assignedToUid || x.email === customer.assignedTo)?.username || employees.find(x => x.uid === customer.assignedToUid || x.email === customer.assignedTo)?.name || '👑 الإدارة';
                                         const assignerDisplay = getAssignerDisplay();
                                         const assignerRole = getAssignerRole();
                                         const assignerUid = isAdmin ? 'admin' : (currentUser?.uid || '');
@@ -13113,7 +13284,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                         <>
                                           <option value="admin">👑 الإدارة (Admin 👑)</option>
                                           {employees.filter(e => e.role !== 'admin' && e.jobTitle !== 'Coordinator').map(empItem => (
-                                            <option key={empItem.uid} value={empItem.uid}>👤 {empItem.name} ({getJobTitleEnglish(empItem.jobTitle)}{empItem.leaderName ? ` - فريق ${empItem.leaderName}` : ''})</option>
+                                            <option key={empItem.uid} value={empItem.uid}>👤 {empItem.username || empItem.name} ({getJobTitleEnglish(empItem.jobTitle)}{empItem.leaderName ? ` - فريق ${empItem.leaderName}` : ''})</option>
                                           ))}
                                         </>
                                       )}
@@ -13344,7 +13515,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
         {/* DEDICATED SAUDI MARKET RECOMMENDATIONS TAB (v2.23)                       */}
         {/* Visible ONLY to Admin and Customer Service                               */}
         {/* ========================================================================= */}
-        {activeTab === 'saudi_signals' && (isAdmin || (hasPermission(currentEmpUser, 'show_card_saudi_stocks') && hasPermission(currentEmpUser, 'canViewSaudiStocks'))) && (() => {
+        {activeTab === 'saudi_signals' && (isAdmin || hasPermission(currentEmpUser, 'show_card_saudi_stocks') || hasPermission(currentEmpUser, 'canViewSaudiStocks')) && (() => {
           const filteredSignals = saudiRecommendations.filter(sig => {
             if (selectedSaudiMonth !== 'all') {
               const dVal = sig.createdAtMillis ? new Date(sig.createdAtMillis) : (sig.createdAt?.seconds ? new Date(sig.createdAt.seconds * 1000) : null);
@@ -13374,9 +13545,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     <SaudiFlagIcon className="w-8 h-8" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-amber-300 flex items-center gap-2">
+                    <h2 className="text-lg font-black text-amber-300 flex items-center gap-2 flex-wrap">
                       <SaudiFlagIcon className="w-6 h-6" />
                       <span>توصيات السوق السعودي</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full border border-amber-500/90 bg-amber-950/80 text-amber-300 font-black text-xs shadow-sm" dir="ltr">
+                        <span>{saudiRecommendations.length.toLocaleString()} توصية</span>
+                        <span className="text-[11px] text-amber-400 font-bold">({saudiRecommendations.filter(s => s.status === 'active').length} سارية ⏳)</span>
+                      </span>
                     </h2>
                     <p className="text-xs text-amber-200/80 mt-0.5">
                       متابعة أهداف ومقاومات ودعوم أسهم السوق السعودي وحساب نسب الإنجاز التلقائي مقابل دعم 1
@@ -13589,6 +13764,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       <th className="py-3 px-3 text-center text-amber-300">مقاومة 4</th>
                       <th className="py-3 px-3 text-amber-300 font-bold text-center">إيقاف الخسارة</th>
                       <th className="py-3 px-3 text-center min-w-[150px] text-amber-300">حالة التوصية</th>
+                      <th className="py-3 px-3 font-extrabold text-center min-w-[125px] bg-emerald-950/50 text-amber-300">الربح/الخسارة (ر.س)</th>
                       <th className="py-3 px-3 font-extrabold text-center min-w-[130px] bg-amber-950/40 text-amber-300">نسبة الإنجاز %</th>
                       <th className="py-3 px-3 text-center text-amber-300">وقت الرفع</th>
                       <th className="py-3 px-3 text-center text-amber-300">آخر تعديل</th>
@@ -13686,7 +13862,32 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                               </select>
                             </td>
 
-                            {/* Calculated percentage vs Support 1 */}
+                                                        {/* Calculated Gain/Loss in SAR (المكسب بالريال) */}
+                            <td className="py-3 px-3 text-center font-mono font-black bg-emerald-950/5">
+                              {sig.status === 'active' ? (
+                                <span className="text-amber-600 font-bold text-[11px] bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                                  قيد التداول ⏳
+                                </span>
+                              ) : sig.status === 'cancelled' ? (
+                                <span className="text-gray-400 font-bold text-[11px]">ملغاة ❌</span>
+                              ) : (() => {
+                                const gainVal = calculateSaudiGainValue(sig);
+                                if (gainVal !== null) {
+                                  return gainVal >= 0 ? (
+                                    <span className="text-emerald-700 font-black text-xs bg-emerald-100 px-2.5 py-0.5 rounded-md border border-emerald-300 inline-block shadow-sm" dir="ltr">
+                                      +{gainVal.toFixed(2)} ر.س
+                                    </span>
+                                  ) : (
+                                    <span className="text-rose-700 font-black text-xs bg-rose-100 px-2.5 py-0.5 rounded-md border border-rose-300 inline-block shadow-sm" dir="ltr">
+                                      {gainVal.toFixed(2)} ر.س
+                                    </span>
+                                  );
+                                }
+                                return <span className="text-gray-400">—</span>;
+                              })()}
+                            </td>
+
+{/* Calculated percentage vs Support 1 */}
                             <td className="py-3 px-3 text-center font-mono font-black bg-emerald-950/5">
                               {sig.status === 'active' ? (
                                 <span className="text-amber-600 font-bold text-[11px] bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
@@ -13766,7 +13967,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
         {/* Visible ONLY to Admin and Customer Service                               */}
         {/* Internal category split: Stocks (أسهم) vs Options (عقود)                 */}
         {/* ========================================================================= */}
-        {activeTab === 'us_signals' && (isAdmin || (hasPermission(currentEmpUser, 'show_card_us_stocks') && hasPermission(currentEmpUser, 'canViewUsStocks'))) && (() => {
+        {activeTab === 'us_signals' && (isAdmin || hasPermission(currentEmpUser, 'show_card_us_stocks') || hasPermission(currentEmpUser, 'canViewUsStocks')) && (() => {
           const filteredSignals = usRecommendations.filter(sig => {
             if (selectedUsMonth !== 'all') {
               const dVal = sig.createdAtMillis ? new Date(sig.createdAtMillis) : (sig.createdAt?.seconds ? new Date(sig.createdAt.seconds * 1000) : null);
@@ -13795,9 +13996,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     <UsFlagIcon className="w-8 h-8" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-amber-300 flex items-center gap-2">
+                    <h2 className="text-lg font-black text-amber-300 flex items-center gap-2 flex-wrap">
                       <UsFlagIcon className="w-6 h-6" />
                       <span>توصيات السوق الأمريكي</span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full border border-amber-500/90 bg-amber-950/80 text-amber-300 font-black text-xs shadow-sm" dir="ltr">
+                        <span>{usRecommendations.length.toLocaleString()} توصية</span>
+                        <span className="text-[11px] text-amber-400 font-bold">({usRecommendations.filter(s => s.status === 'active').length} سارية ⏳)</span>
+                      </span>
                     </h2>
                     <p className="text-xs text-amber-200/80 mt-0.5">
                       متابعة أهداف ووقف خسارة أسهم وعقود السوق الأمريكي وحساب نسب الإنجاز التلقائي مقابل سعر الشراء (Buy)
@@ -14024,6 +14229,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       <th className="py-3 px-3 text-center text-amber-300">الهدف 2 (T2)</th>
                       <th className="py-3 px-3 text-amber-300 font-bold text-center">وقف الخسارة (SL)</th>
                       <th className="py-3 px-3 text-center min-w-[150px] text-amber-300">حالة التوصية</th>
+                      <th className="py-3 px-3 font-extrabold text-center min-w-[125px] bg-blue-950/50 text-amber-300">الربح/الخسارة ($)</th>
                       <th className="py-3 px-3 font-extrabold text-center min-w-[130px] bg-amber-950/40 text-amber-300">نسبة الإنجاز %</th>
                       <th className="py-3 px-3 text-center text-amber-300">وقت الرفع</th>
                       <th className="py-3 px-3 text-center text-amber-300">آخر تعديل</th>
@@ -14107,7 +14313,32 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                               </select>
                             </td>
 
-                            {/* Calculated percentage vs Buy Price */}
+                                                        {/* Calculated Gain/Loss in USD (المكسب بالدولار) */}
+                            <td className="py-3 px-3 text-center font-mono font-black bg-blue-950/5">
+                              {sig.status === 'active' ? (
+                                <span className="text-amber-600 font-bold text-[11px] bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                                  قيد التداول ⏳
+                                </span>
+                              ) : sig.status === 'cancelled' ? (
+                                <span className="text-gray-400 font-bold text-[11px]">ملغاة ❌</span>
+                              ) : (() => {
+                                const gainVal = calculateUsGainValue(sig);
+                                if (gainVal !== null) {
+                                  return gainVal >= 0 ? (
+                                    <span className="text-emerald-700 font-black text-xs bg-emerald-100 px-2.5 py-0.5 rounded-md border border-emerald-300 inline-block shadow-sm" dir="ltr">
+                                      +${gainVal.toFixed(2)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-rose-700 font-black text-xs bg-rose-100 px-2.5 py-0.5 rounded-md border border-rose-300 inline-block shadow-sm" dir="ltr">
+                                      -${Math.abs(gainVal).toFixed(2)}
+                                    </span>
+                                  );
+                                }
+                                return <span className="text-gray-400">—</span>;
+                              })()}
+                            </td>
+
+{/* Calculated percentage vs Buy Price */}
                             <td className="py-3 px-3 text-center font-mono font-black bg-blue-950/5">
                               {sig.status === 'active' ? (
                                 <span className="text-amber-600 font-bold text-[11px] bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
@@ -15279,7 +15510,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                               <option value="admin">👑 الإدارة (Admin 👑)</option>
                               {assignableEmployees.map(emp => (
                                 <option key={emp.uid} value={emp.uid}>
-                                  👤 {emp.name} ({getJobTitleEnglish(emp.jobTitle)}{emp.leaderName ? ` - Team ${emp.leaderName}` : ''})
+                                  👤 {emp.username || emp.name} ({getJobTitleEnglish(emp.jobTitle)}{emp.leaderName ? ` - Team ${emp.leaderName}` : ''})
                                 </option>
                               ))}
                             </>
@@ -15544,7 +15775,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     <th className="p-4 w-12 text-center">
                       <input type="checkbox" checked={selectedEmployees.length > 0 && selectedEmployees.length === employees.filter(e => e.role !== 'admin').length} onChange={toggleAllEmployees} className="w-4 h-4 text-amber-500 rounded accent-amber-500" />
                     </th>
-                    <th className="p-4 font-extrabold text-amber-300 text-xs whitespace-nowrap">اسم الموظف / الكود</th>
+                    <th className="p-4 font-extrabold text-amber-300 text-xs whitespace-nowrap">اسم الموظف المستعار / الكود</th>
                     <th className="p-4 font-extrabold text-amber-300 text-xs whitespace-nowrap">التدرج الوظيفي</th>
                     <th className="p-4 font-extrabold text-amber-300 text-xs whitespace-nowrap">Team / Leader</th>
                     <th className="p-4 font-extrabold text-amber-300 text-xs whitespace-nowrap">بيانات الدخول (م/س)</th>
@@ -15570,7 +15801,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                           <div className="flex items-center gap-2">
                             {emp.isActive === false && <span className="w-2 h-2 bg-red-500 rounded-full shrink-0" title="موقوف"></span>}
                             {emp.isActive !== false && <span className="w-2 h-2 bg-green-500 rounded-full shrink-0" title="نشط"></span>}
-                            <span>{emp.username || emp.name}</span>
+                            <span>{emp.name || emp.username}</span>
                             {emp.empCode && (
                               <span className="bg-gray-100 text-gray-700 font-mono text-[11px] px-2 py-0.5 rounded border border-gray-200" dir="ltr">
                                 #{emp.empCode}
@@ -15610,7 +15841,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                             <div className="flex flex-col gap-1">
                               <span className="bg-purple-50 text-purple-900 border border-purple-200 font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 w-fit">
                                 <span>👑</span>
-                                <span>{employees.find(l => l.uid === emp.leaderUid)?.name || emp.leaderName || 'Leader Team'}</span>
+                                <span>{employees.find(l => l.uid === emp.leaderUid)?.username || employees.find(l => l.uid === emp.leaderUid)?.name || emp.leaderName || 'Leader Team'}</span>
                               </span>
                               {emp.leaderAssignedAt && (
                                 <span className="text-[10px] text-purple-700 font-mono flex items-center gap-1" title="تاريخ ووقت التعيين تحت هذا الليدر">
@@ -15883,7 +16114,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                               const vObj = visitors.find(x => x.id === vId) || customers.find(x => x.id === vId);
                               const isVisDoc = visitors.some(x => x.id === vId);
                               const coll = isVisDoc ? 'visitor_customers' : 'بيانات_تسجيل_العملاء';
-                              const prevEmp = employees.find(x => x.uid === vObj?.assignedToUid || x.email === vObj?.assignedTo)?.name || '👑 الإدارة';
+                              const prevEmp = employees.find(x => x.uid === vObj?.assignedToUid || x.email === vObj?.assignedTo)?.username || employees.find(x => x.uid === vObj?.assignedToUid || x.email === vObj?.assignedTo)?.name || '👑 الإدارة';
                               const logObj = createAssignmentLog(prevEmp, targetName, assignerDisplay);
 
                               batch.update(doc(db, coll, vId), {
@@ -15950,7 +16181,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                         <>
                           <option value="admin">👑 الإدارة (Admin 👑)</option>
                           {employees.filter(e => e.role !== 'admin' && e.jobTitle !== 'Coordinator').map(empItem => (
-                            <option key={empItem.uid} value={empItem.uid}>👤 {empItem.name} ({getJobTitleEnglish(empItem.jobTitle)}{empItem.leaderName ? ` - فريق ${empItem.leaderName}` : ''})</option>
+                            <option key={empItem.uid} value={empItem.uid}>👤 {empItem.username || empItem.name} ({getJobTitleEnglish(empItem.jobTitle)}{empItem.leaderName ? ` - فريق ${empItem.leaderName}` : ''})</option>
                           ))}
                         </>
                       )}
@@ -16152,7 +16383,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                   value={isLeadWithAdmin(visitor) ? "admin" : visitor.assignedToUid}
                                   onChange={async (e) => {
                                     const uid = e.target.value;
-                                    const prevEmpName = employees.find(x => x.uid === visitor.assignedToUid || x.email === visitor.assignedTo)?.name || '👑 الإدارة';
+                                    const prevEmpName = employees.find(x => x.uid === visitor.assignedToUid || x.email === visitor.assignedTo)?.username || employees.find(x => x.uid === visitor.assignedToUid || x.email === visitor.assignedTo)?.name || '👑 الإدارة';
                                     const assignerDisplay = getAssignerDisplay();
                                     const assignerRole = getAssignerRole();
                                     const assignerUid = isAdmin ? 'admin' : (currentUser?.uid || '');
@@ -16235,7 +16466,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                     <>
                                       <option value="admin">👑 الإدارة (Admin 👑)</option>
                                       {employees.filter(e => e.role !== 'admin' && e.jobTitle !== 'Coordinator').map(empItem => (
-                                        <option key={empItem.uid} value={empItem.uid}>👤 {empItem.name} ({getJobTitleEnglish(empItem.jobTitle)}{empItem.leaderName ? ` - فريق ${empItem.leaderName}` : ''})</option>
+                                        <option key={empItem.uid} value={empItem.uid}>👤 {empItem.username || empItem.name} ({getJobTitleEnglish(empItem.jobTitle)}{empItem.leaderName ? ` - فريق ${empItem.leaderName}` : ''})</option>
                                       ))}
                                     </>
                                   )}
@@ -16255,7 +16486,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                               <span className="text-xs font-bold text-gray-700">
                                 {(() => {
                                   const vEmp = employees.find(e => e.uid === visitor.assignedToUid || e.email === visitor.assignedTo);
-                                  return `👤 ${vEmp?.name || '👑 الإدارة'} (${getJobTitleEnglish(vEmp?.jobTitle || (visitor.assignedToUid === 'admin' ? 'Admin' : 'Agent'))})`;
+                                  return `👤 ${vEmp?.username || vEmp?.name || '👑 الإدارة'} (${getJobTitleEnglish(vEmp?.jobTitle || (visitor.assignedToUid === 'admin' ? 'Admin' : 'Agent'))})`;
                                 })()}
                               </span>
                             )}
@@ -16318,6 +16549,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               </h2>
               <div className="flex space-x-2 space-x-reverse">
                 <button onClick={() => setRbFilter('all')} className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${rbFilter === 'all' ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'bg-slate-800 text-purple-200 hover:bg-slate-700 border border-purple-500/30'}`}>الكل</button>
+                <button onClick={() => setRbFilter('recommendations')} className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${rbFilter === 'recommendations' ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'bg-slate-800 text-purple-200 hover:bg-slate-700 border border-purple-500/30'}`}>📈 توصيات (سعودي/أمريكي)</button>
                 <button onClick={() => setRbFilter('employee')} className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${rbFilter === 'employee' ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'bg-slate-800 text-purple-200 hover:bg-slate-700 border border-purple-500/30'}`}>موظفين</button>
                 <button onClick={() => setRbFilter('customer')} className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${rbFilter === 'customer' ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'bg-slate-800 text-purple-200 hover:bg-slate-700 border border-purple-500/30'}`}>عملاء</button>
                 <button onClick={() => setRbFilter('visitor')} className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${rbFilter === 'visitor' ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'bg-slate-800 text-purple-200 hover:bg-slate-700 border border-purple-500/30'}`}>زوار (OTP)</button>
@@ -16364,17 +16596,20 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                 <tbody className="divide-y divide-red-50">
                   {recycleBin.filter(item => {
                     const isVisitorItem = item.type === 'visitor' || item.originalCollection === 'visitor_customers' || item.source?.includes('موقع') || item.source?.includes('OTP');
+                    const isRecItem = item.type === 'saudi_recommendations' || item.type === 'us_recommendations' || item.source?.includes('recommendations') || item.source?.includes('توصيات');
                     const matchesType = rbFilter === 'all' 
                       ? true 
-                      : rbFilter === 'visitor' 
-                        ? isVisitorItem 
-                        : rbFilter === 'customer' 
-                          ? (item.type === 'customer' && !isVisitorItem) 
-                          : item.type === rbFilter;
+                      : rbFilter === 'recommendations'
+                        ? isRecItem
+                        : rbFilter === 'visitor' 
+                          ? isVisitorItem 
+                          : rbFilter === 'customer' 
+                            ? (item.type === 'customer' && !isVisitorItem) 
+                            : item.type === rbFilter;
                     if (!matchesType) return false;
                     if (!dashboardSearch.trim()) return true;
                     const term = dashboardSearch.toLowerCase();
-                    return item.name?.toLowerCase().includes(term) || item.firstName?.toLowerCase().includes(term) || item.email?.toLowerCase().includes(term) || item.phone?.includes(term) || item.phoneNumber?.includes(term);
+                    return item.name?.toLowerCase().includes(term) || item.title?.toLowerCase().includes(term) || item.firstName?.toLowerCase().includes(term) || item.email?.toLowerCase().includes(term) || item.phone?.includes(term) || item.phoneNumber?.includes(term);
                   }).map(item => (
                     <tr key={item.id} className={`transition ${selectedRecycleItems.includes(item.id) ? 'bg-red-50' : 'hover:bg-red-50/50'}`}>
                       <td className="p-4">
@@ -16386,6 +16621,8 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                         />
                       </td>
                       <td className="p-4 text-sm font-bold text-gray-700">
+                        {item.type === 'saudi_recommendations' && <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-lg text-xs font-bold">🇸🇦 توصية سعودية</span>}
+                        {item.type === 'us_recommendations' && <span className="bg-blue-100 text-blue-900 border border-blue-300 px-2.5 py-1 rounded-lg text-xs font-bold">🇺🇸 توصية أمريكية</span>}
                         {item.type === 'employee' && <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">👤 موظف</span>}
                         {item.type === 'customer' && item.originalCollection === 'leads_crm' && <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-bold">🎯 Leads CRM</span>}
                         {item.type === 'customer' && item.originalCollection === 'employee_leads' && <span className="bg-cyan-100 text-cyan-800 px-2 py-1 rounded text-xs font-bold">📋 داتا موظف</span>}
@@ -16399,7 +16636,17 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                         {item.type === 'message' && <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">💬 رسالة شات</span>}
                       </td>
                       <td className="p-4 text-sm text-gray-800">
-                        {item.type === 'employee' && (<span>{item.name} ({item.email})</span>)}
+                        {(item.type === 'saudi_recommendations' || item.type === 'us_recommendations' || item.source?.includes('recommendations')) ? (
+                          <div className="space-y-0.5">
+                            <strong className="text-gray-950 font-mono text-xs block">📌 {item.title || item.name || 'توصية محذوفة'}</strong>
+                            <div className="text-[11px] text-gray-700 font-bold">
+                              {(item.data?.buyPrice || item.data?.support1) && <span className="text-amber-800 ml-2">سعر الدخول: {item.data.buyPrice || item.data.support1}</span>}
+                              {(item.data?.target1 || item.data?.resistance1) && <span className="text-emerald-800 ml-2">• T1: {item.data.target1 || item.data.resistance1}</span>}
+                              {item.data?.target2 && <span className="text-emerald-800 ml-2">• T2: {item.data.target2}</span>}
+                              {item.data?.stopLoss && <span className="text-rose-800 ml-2">• الوقف: {item.data.stopLoss}</span>}
+                            </div>
+                          </div>
+                        ) : item.type === 'employee' ? (<span>{item.name} ({item.email})</span>) : null}
                         {(item.type === 'visitor' || item.originalCollection === 'visitor_customers' || item.source?.includes('موقع') || item.source?.includes('OTP')) ? (
                           <span>
                             <strong className="text-gray-900">{item.name || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'زائر موقع (OTP)'}</strong>{' '}
@@ -16521,16 +16768,15 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
 
               <form onSubmit={handleAddEmployee} className="space-y-4" autoComplete="off">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">اسم المستخدم (للدخول)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">اسم الموظف المستعار (الظاهر في شات الواتساب للعملاء)</label>
                   <input 
                     type="text" 
+                    autoComplete="off"
                     required
-                    autoComplete="new-username"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-left"
-                    value={newEmpUsername}
-                    onChange={(e) => setNewEmpUsername(e.target.value)}
-                    placeholder="مثال: ahmed"
-                    dir="ltr"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition font-bold"
+                    value={newEmpName}
+                    onChange={(e) => setNewEmpName(e.target.value)}
+                    placeholder="مثال: مصطفى أحمد"
                   />
                 </div>
                 <div>
@@ -16576,14 +16822,16 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">اسم الموظف</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">اسم المستخدم (للدخول للسيستم مع الباسورد)</label>
                   <input 
                     type="text" 
-                    autoComplete="off"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition"
-                    value={newEmpName}
-                    onChange={(e) => setNewEmpName(e.target.value)}
-                    placeholder="مثال: أحمد محمد"
+                    required
+                    autoComplete="new-username"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-left font-semibold"
+                    value={newEmpUsername}
+                    onChange={(e) => setNewEmpUsername(e.target.value)}
+                    placeholder="مثال: mostafa"
+                    dir="ltr"
                   />
                 </div>
                 <div>
@@ -16655,14 +16903,14 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
 
               <form onSubmit={handleEditEmployee} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">اسم المستخدم (للدخول)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">اسم الموظف المستعار (الظاهر في شات الواتساب للعملاء)</label>
                   <input 
                     type="text" 
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-left"
-                    value={editEmpUsername}
-                    onChange={(e) => setEditEmpUsername(e.target.value)}
-                    dir="ltr"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition font-bold"
+                    value={editEmpName}
+                    onChange={(e) => setEditEmpName(e.target.value)}
+                    placeholder="مثال: مصطفى أحمد"
                   />
                 </div>
                 <div>
@@ -16707,12 +16955,15 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">اسم الموظف</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">اسم المستخدم (للدخول للسيستم مع الباسورد)</label>
                   <input 
                     type="text" 
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                    value={editEmpName}
-                    onChange={(e) => setEditEmpName(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition text-left font-semibold"
+                    value={editEmpUsername}
+                    onChange={(e) => setEditEmpUsername(e.target.value)}
+                    placeholder="مثال: mostafa"
+                    dir="ltr"
                   />
                 </div>
                 <div>
@@ -17039,7 +17290,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       <option value="admin">👑 الإدارة (Admin 👑)</option>
                       {assignableEmployees.map(emp => (
                         <option key={emp.uid} value={emp.uid}>
-                          👤 {emp.name} ({getJobTitleEnglish(emp.jobTitle)}{emp.leaderName ? ` - Team ${emp.leaderName}` : ''})
+                          👤 {emp.username || emp.name} ({getJobTitleEnglish(emp.jobTitle)}{emp.leaderName ? ` - Team ${emp.leaderName}` : ''})
                         </option>
                       ))}
                     </>
@@ -17948,7 +18199,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                        ) : emp.jobTitle === 'Customer Service' || emp.jobTitle === 'خدمة العملاء' ? (
                                          <span className="inline-flex items-center gap-1 whitespace-nowrap bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">🎧 Customer Service</span>
                                        ) : emp.leaderUid ? (
-                                        <span className="text-purple-300 font-medium">👑 {employees.find(l => l.uid === emp.leaderUid)?.name || emp.leaderName || 'ليدر'}</span>
+                                        <span className="text-purple-300 font-medium">👑 {employees.find(l => l.uid === emp.leaderUid)?.username || employees.find(l => l.uid === emp.leaderUid)?.name || emp.leaderName || 'ليدر'}</span>
                                       ) : (
                                         <span className="text-slate-500 text-[10px]">مباشر للإدارة</span>
                                       )}
@@ -18009,7 +18260,10 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
         {isCallsAnalysisModalOpen && (() => {
           // 1. Role Scoped Call Logs
           const roleLogs = callLogs.filter(log => {
-            if (isAdmin || isCoordinator) return true;
+            if (callsAnalysisModalMode === 'personal') {
+              return log.employeeUid === currentUser?.uid || log.callerUid === currentUser?.uid;
+            }
+            if (isAdmin || isCoordinator || (isCustomerService && callsAnalysisModalMode === 'all')) return true;
             if (isLeader) {
               return log.employeeUid === currentUser?.uid || log.leaderUid === currentUser?.uid || myTeamMembers.some(m => m.uid === log.employeeUid);
             }
@@ -18079,7 +18333,9 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
           const uniqueCallers = new Set(filteredLogs.map(l => l.employeeUid).filter(Boolean)).size;
 
           // Per-Employee Analytics Breakdown (Excluding Admin and Coordinators like Waleed as they don't make calls)
-          const eligibleEmployees = (isAdmin || isCoordinator)
+          const eligibleEmployees = (callsAnalysisModalMode === 'personal')
+            ? [currentEmpUser].filter(e => e && e.jobTitle !== 'Coordinator' && e.jobTitle !== 'منسق للإدارة' && e.role !== 'coordinator')
+            : (isAdmin || isCoordinator || (isCustomerService && callsAnalysisModalMode === 'all'))
             ? employees.filter(e => 
                 e.role !== 'admin' && 
                 !adminEmails.includes(e.email?.toLowerCase()) &&
@@ -18164,12 +18420,14 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
                         <span>تقرير وتحليل أداء المكالمات 📞</span>
                         <span className="text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 px-2.5 py-0.5 rounded-full font-bold">
-                          {isAdmin ? 'تحليل المنصة الشامل' : isCoordinator ? 'منسق الإدارة' : isLeader ? 'تحليل فريق العمل' : 'مكالماتي الشخصية'}
+                          {callsAnalysisModalMode === 'personal' ? 'مكالماتي الشخصية' : isAdmin ? 'تحليل المنصة الشامل' : (isCoordinator || isCustomerService) ? 'خدمة العملاء والمنسق (All Staff)' : isLeader ? 'تحليل فريق العمل' : 'مكالماتي الشخصية'}
                         </span>
                       </h2>
                       <p className="text-xs text-purple-300 font-medium mt-0.5">
-                        {isAdmin || isCoordinator 
-                          ? 'تتبع دقيق ومفصل لمعدل المكالمات (تم الرد / لم يرد)، زمن المكالمات بالدقائق والثواني الصادرة من برنامج MicroSIP' 
+                        {callsAnalysisModalMode === 'personal' 
+                          ? 'سجل وتحليل مكالماتك ومعدل الرد وزمن المكالمات الصادرة الخاصة بك فقط'
+                          : (isAdmin || isCoordinator || isCustomerService)
+                          ? 'تتبع دقيق ومفصل لمعدل المكالمات (تم الرد / لم يرد)، زمن المكالمات بالدقائق والثواني الصادرة من برنامج MicroSIP على مستوى كافة الموظفين' 
                           : isLeader 
                           ? `تتبع ومتابعة أداء مكالماتك ومكالمات فريقك (${myTeamMembers.length} موظف)` 
                           : 'سجل وتحليل مكالماتك ومعدل الرد وزمن المكالمات الصادرة'}
@@ -18233,8 +18491,8 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       ))}
                     </div>
 
-                    {/* Employee Selector (for Admin, Coordinator, Leader) */}
-                    {(isAdmin || isCoordinator || isLeader) && (
+                    {/* Employee Selector (for Admin, Coordinator, Customer Service, Leader) */}
+                    {callsAnalysisModalMode !== 'personal' && (isAdmin || isCoordinator || isCustomerService || isLeader) && (
                       <div className="flex items-center gap-1.5 min-w-[200px]">
                         <select
                           value={callsSelectedEmpFilter}

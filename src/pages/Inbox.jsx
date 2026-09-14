@@ -58,6 +58,13 @@ export default function Inbox() {
   const isAdmin = currentUser?.email?.toLowerCase() === 'etegahanalysis@gmail.com';
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  const currentEmpUser = employees.find(e => 
+    (e.uid && e.uid === currentUser?.uid) || 
+    (e.id && e.id === currentUser?.uid) || 
+    (e.email && e.email?.toLowerCase() === currentUser?.email?.toLowerCase()) ||
+    (e.authEmail && e.authEmail?.toLowerCase() === currentUser?.email?.toLowerCase()) ||
+    (e.username && currentUser?.email && currentUser.email.toLowerCase().startsWith(e.username.toLowerCase() + '@'))
+  );
 
   // جلب الموظفين للأدمن
   useEffect(() => {
@@ -456,7 +463,7 @@ export default function Inbox() {
           <div className="flex items-center space-x-3 space-x-reverse">
             <img src="/logo.jpg" alt="Etegah Logo" className="w-10 h-10 rounded-full object-cover border border-white/20 shadow-sm" />
             <span className="font-bold text-gray-100 text-sm truncate max-w-[150px]">
-              {currentUser?.email?.split('@')[0]} ({isAdmin ? 'أدمن' : 'موظف'})
+              {currentEmpUser?.name || currentEmpUser?.username || (isAdmin ? 'الإدارة' : currentUser?.email?.split('@')[0])} ({isAdmin ? 'أدمن' : (currentEmpUser?.jobTitle || 'موظف')})
             </span>
           </div>
           <div className="flex items-center space-x-2 space-x-reverse">
