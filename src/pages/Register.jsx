@@ -249,9 +249,9 @@ export default function Register({ lang }) {
                     fontWeight: 'bold'
                   }}
                 >
-                  <option value="+966">SA +966 🇸🇦</option>
-                  <option value="+971">AE +971 🇦🇪</option>
-                  <option value="+1">US +1 🇺🇸</option>
+                  <option value="+966">السعودية (+966)</option>
+                  <option value="+971">الإمارات (+971)</option>
+                  <option value="+1">أمريكا (+1)</option>
                 </select>
                 <input 
                   name="phone"

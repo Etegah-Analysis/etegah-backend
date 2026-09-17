@@ -18,7 +18,7 @@ export default function Home({ onOpenRegister }) {
   const handleOpenWhatsApp = () => {
     const phone = localStorage.getItem('visitorPhone') || '';
     if (!phone) {
-      window.location.href = '/login';
+      window.location.href = '/visitor-login';
       return;
     }
     window.dispatchEvent(new Event('open_whatsapp_widget'));

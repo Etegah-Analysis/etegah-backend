@@ -230,7 +230,7 @@ export default function WhatsAppWidget() {
   const handleTriggerClick = () => {
     if (!userPhone) {
       alert('يرجى تسجيل الدخول أولاً بالـ OTP لتأكيد حسابك وبدء التواصل المباشر 🔐');
-      window.location.href = '/login';
+      window.location.href = '/visitor-login';
       return;
     }
     setIsOpen(!isOpen);
@@ -576,7 +576,7 @@ export default function WhatsAppWidget() {
 
               <form onSubmit={handleVerifyEmpCode} className="space-y-2.5">
                 <label className="block text-[11px] font-bold text-cyan-200">
-                  كود الموظف (مثال: #206 أو 206):
+                  المتابعة مع موظف محدد (مثال: #206 أو 206):
                 </label>
                 <div className="flex gap-2">
                   <input

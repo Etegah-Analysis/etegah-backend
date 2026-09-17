@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { X, ShieldCheck } from 'lucide-react';
 
 export default function LandingPage() {
   const [step, setStep] = useState(1);
@@ -8,11 +10,12 @@ export default function LandingPage() {
   const [email, setEmail] = useState('');
   const [countryCode, setCountryCode] = useState('+966');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [otpChannel, setOtpChannel] = useState('sms'); // 'sms' or 'whatsapp'
+  const [otpChannel, setOtpChannel] = useState('sms'); // Strictly SMS
   const [otp, setOtp] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpAttempts, setOtpAttempts] = useState(0);
+  const navigate = useNavigate();
 
   // Smart Phone Input Auto-detection (Saudi Arabia, UAE, USA)
   const handlePhoneInputChange = (val) => {
@@ -30,6 +33,10 @@ export default function LandingPage() {
     setPhoneNumber(clean);
   };
 
+  const handleExitToHome = () => {
+    navigate('/');
+  };
+
   const handleSendOTP = async (e) => {
     if (e) e.preventDefault();
     if (!visitorName.trim()) {
@@ -41,11 +48,6 @@ export default function LandingPage() {
       return;
     }
 
-    // Egyptian phone validation (10 digits)
-    if (countryCode === '+20' && phoneNumber.length !== 10) {
-      alert('رقم الجوال المصري يجب أن يتكون من 10 أرقام بعد حذف الصفر (مثال: 1114934567)');
-      return;
-    }
     // Saudi phone validation (9 digits)
     if (countryCode === '+966' && phoneNumber.length !== 9) {
       alert('رقم الجوال السعودي يجب أن يبدأ برقم 5 ويتكون من 9 أرقام (مثال: 501234567)');
@@ -78,7 +80,7 @@ export default function LandingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone: fullPhone,
-          channel: otpChannel
+          channel: 'sms'
         })
       });
       const data = await res.json();
@@ -124,9 +126,7 @@ export default function LandingPage() {
       }
 
       if (isVerified || currentCode === '123456' || currentCode.length === 6) {
-        // ضمان كتابة العميل مباشرة في Firestore من جهة العميل أيضاً (Client-side fallback)
         try {
-          // 1. إضافة الزائر في visitor_customers
           await addDoc(collection(db, 'visitor_customers'), {
             firstName: visitorName || 'زائر جديد',
             lastName: '',
@@ -137,7 +137,6 @@ export default function LandingPage() {
             updatedAt: serverTimestamp()
           });
 
-          // 2. إضافة الزائر في بيانات_تسجيل_العملاء ليظهر فوراً في CRM Dashboard
           const cleanDocId = fullPhone.replace(/[^0-9]/g, '');
           const crmDocRef = doc(db, 'بيانات_تسجيل_العملاء', cleanDocId);
           const crmSnap = await getDoc(crmDocRef);
@@ -172,7 +171,6 @@ export default function LandingPage() {
         localStorage.setItem('visitorName', visitorName);
         localStorage.setItem('visitorPhone', fullPhone);
 
-        // Instant redirect to platform
         setStep(3);
         window.location.href = '/';
       } else {
@@ -196,11 +194,6 @@ export default function LandingPage() {
     }
   };
 
-  const openDirectWhatsAppOtp = () => {
-    const text = encodeURIComponent(`مرحباً منصة اتجاه، رمز كود التفعيل الخاص بي هو: *${generatedCode || '123456'}*`);
-    window.open(`https://wa.me/14015988669?text=${text}`, '_blank');
-  };
-
   React.useEffect(() => {
     if (step === 2 && otp.length === 6) {
       handleVerifyOTP(null, otp);
@@ -208,173 +201,158 @@ export default function LandingPage() {
   }, [otp, step]);
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col font-sans relative overflow-hidden" dir="rtl">
-      {/* Background Effects */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div 
+      className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4 font-sans text-white animate-fade-in" 
+      dir="rtl"
+      onClick={handleExitToHome}
+    >
+      {/* 3D Glassmorphism Logo Watermark Background */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-10 overflow-hidden z-0">
+        <img 
+          src="/logo.jpg" 
+          alt="3D Logo Watermark" 
+          className="w-[550px] h-[550px] rounded-full object-cover blur-[2px] scale-150 transform rotate-12 shadow-[0_0_90px_rgba(6,182,212,0.6)] border-4 border-cyan-400/20" 
+        />
+      </div>
+
+      {/* 3D Glass Modal Card */}
       <div 
-        className="absolute inset-0 opacity-5 bg-center bg-no-repeat pointer-events-none z-0"
-        style={{ backgroundImage: "url('/logo.jpg')", backgroundSize: "800px", backgroundPosition: "center" }}
-      ></div>
+        className="bg-slate-950/90 backdrop-blur-2xl border border-cyan-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-[0_25px_80px_rgba(0,0,0,0.9)] border-t-2 border-t-cyan-400 relative z-10 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button to Exit to Home */}
+        <button 
+          onClick={handleExitToHome}
+          className="absolute top-4 left-4 text-gray-400 hover:text-white transition p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
+          title="إغلاق والعودة للرئيسية"
+        >
+          <X size={20} />
+        </button>
 
-      <div className="flex-1 flex items-center justify-center p-4 relative z-10">
-        <div className="bg-[#131B2C]/90 backdrop-blur-xl border border-white/5 rounded-2xl p-8 max-w-md w-full shadow-2xl">
-          <div className="flex justify-center mb-6">
-             <img src="/logo.jpg" alt="Logo" className="w-20 h-20 rounded-full object-cover border-2 border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.5)]" />
-          </div>
-          <h2 className="text-3xl font-bold text-center mb-8 text-white">تسجيل الدخول للمنصة</h2>
+        <div className="flex justify-center mb-5">
+          <img src="/logo.jpg" alt="Logo" className="w-16 h-16 rounded-full object-cover border-2 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.5)]" />
+        </div>
 
-          {step === 1 && (
-            <form onSubmit={handleSendOTP} className="space-y-5">
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2 text-gray-300">اسم الزائر (مطلوب)</label>
-                <input
-                  type="text"
-                  value={visitorName}
-                  onChange={e => setVisitorName(e.target.value)}
-                  required
-                  placeholder="أدخل اسمك بالكامل"
-                  className="w-full bg-[#1E293B] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-500 transition text-white"
-                />
-              </div>
-              <p className="text-xs text-center text-gray-400">يمكنك كتابة الاسم بالعربية أو الإنجليزية</p>
+        <h2 className="text-2xl font-bold text-center mb-6 text-white flex items-center justify-center gap-2">
+          تسجيل الدخول للمنصة 🔐
+        </h2>
 
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">البريد الإلكتروني (اختياري)</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="أدخل بريدك الإلكتروني"
-                  className="w-full bg-[#1E293B] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-500 transition text-white placeholder-gray-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">رقم الهاتف (مطلوب)</label>
-                <div className="flex bg-[#1E293B] border border-white/10 rounded-lg focus-within:border-cyan-500 transition overflow-hidden" dir="ltr">
-                  <select 
-                    value={countryCode} 
-                    onChange={e => setCountryCode(e.target.value)}
-                    className="bg-[#1E293B] text-white px-3 py-3 border-r border-white/10 focus:outline-none outline-none appearance-none font-bold"
-                  >
-                    <option value="+966">SA +966 🇸🇦</option>
-                    <option value="+971">AE +971 🇦🇪</option>
-                    <option value="+1">US +1 🇺🇸</option>
-                  </select>
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={e => handlePhoneInputChange(e.target.value)}
-                    required
-                    placeholder={
-                      countryCode === '+966' ? "5XXXXXXXX" :
-                      countryCode === '+971' ? "5XXXXXXXX" : "XXXXXXXXXX"
-                    }
-                    className="w-full bg-transparent px-4 py-3 focus:outline-none text-white placeholder-gray-500 text-left font-bold"
-                  />
-                </div>
-              </div>
-
-              {/* OTP Delivery Method Toggle */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">طريقة استلام كود التفعيل:</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setOtpChannel('sms')}
-                    className={`py-2.5 px-3 rounded-lg border font-bold text-sm flex items-center justify-center gap-2 transition ${
-                      otpChannel === 'sms'
-                        ? 'border-cyan-400 bg-cyan-400/20 text-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.2)]'
-                        : 'border-white/10 bg-[#1E293B] text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <span>💬</span> رسالة SMS
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOtpChannel('whatsapp')}
-                    className={`py-2.5 px-3 rounded-lg border font-bold text-sm flex items-center justify-center gap-2 transition ${
-                      otpChannel === 'whatsapp'
-                        ? 'border-green-500 bg-green-500/20 text-green-300 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
-                        : 'border-white/10 bg-[#1E293B] text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <span>🟢</span> الواتساب WhatsApp
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg hover:shadow-cyan-500/25 transition duration-200 mt-6 disabled:opacity-50"
-              >
-                {loading ? 'جاري التحميل...' : 'إرسال كود التحقق'}
-              </button>
-            </form>
-          )}
-
-          {step === 2 && (
-            <form onSubmit={handleVerifyOTP} className="space-y-6 text-center">
-              <div className="space-y-2">
-                <h3 className="text-xl font-semibold text-white">أدخل رمز التحقق</h3>
-                <p className="text-sm text-gray-400">
-                  تم إرسال كود من 6 أرقام إلى هاتفك عبر ({otpChannel === 'sms' ? 'رسالة نصية SMS' : 'رسالة الواتساب WhatsApp'})
-                </p>
-              </div>
-
+        {step === 1 && (
+          <form onSubmit={handleSendOTP} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-cyan-200">اسم الزائر (مطلوب)</label>
               <input
                 type="text"
-                maxLength="6"
-                value={otp}
-                onChange={e => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder="000000"
-                autoFocus
-                className="w-full bg-[#1E293B] border border-white/10 rounded-lg px-4 py-4 text-center text-3xl font-bold tracking-[1em] focus:outline-none focus:border-cyan-500 transition text-cyan-400"
+                value={visitorName}
+                onChange={e => setVisitorName(e.target.value)}
+                required
+                placeholder="أدخل اسمك بالكامل"
+                className="w-full bg-slate-900 border border-cyan-500/30 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 transition"
               />
-
-              {otpChannel === 'whatsapp' && (
-                <button
-                  type="button"
-                  onClick={openDirectWhatsAppOtp}
-                  className="w-full bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 text-emerald-300 font-bold py-2.5 px-4 rounded-lg text-xs flex items-center justify-center gap-2 transition"
-                >
-                  <span>🟢</span> فتح كود التفعيل عبر الواتساب فوراً
-                </button>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || otp.length < 6}
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition duration-200 disabled:opacity-50"
-              >
-                {loading ? 'جاري التحقق...' : 'تأكيد التسجيل'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setStep(1);
-                  setOtp('');
-                }}
-                className="text-xs text-gray-400 hover:text-white transition"
-              >
-                تعديل رقم الهاتف
-              </button>
-            </form>
-          )}
-
-          {step === 3 && (
-            <div className="text-center py-8 space-y-4">
-              <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl animate-bounce">
-                ✓
-              </div>
-              <h3 className="text-2xl font-bold text-white">تم التسجيل بنجاح!</h3>
-              <p className="text-sm text-gray-400">جاري تحويلك إلى منصة اتجاه التحليل الذكي...</p>
             </div>
-          )}
-        </div>
+            <p className="text-[10px] text-gray-400 text-center">يمكنك كتابة الاسم بالعربية أو الإنجليزية</p>
+
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-cyan-200">البريد الإلكتروني (اختياري)</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="أدخل بريدك الإلكتروني"
+                className="w-full bg-slate-900 border border-cyan-500/30 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1.5 text-cyan-200">رقم الهاتف (مطلوب)</label>
+              <div className="flex bg-slate-900 border border-cyan-500/30 rounded-xl overflow-hidden focus-within:border-cyan-400 transition" dir="ltr">
+                <select 
+                  value={countryCode} 
+                  onChange={e => setCountryCode(e.target.value)}
+                  className="bg-slate-900 text-cyan-300 px-3 py-2.5 border-r border-white/10 focus:outline-none outline-none font-bold text-xs cursor-pointer"
+                >
+                  <option value="+966">السعودية (+966)</option>
+                  <option value="+971">الإمارات (+971)</option>
+                  <option value="+1">أمريكا (+1)</option>
+                </select>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={e => handlePhoneInputChange(e.target.value)}
+                  required
+                  placeholder={
+                    countryCode === '+966' ? "5XXXXXXXX" :
+                    countryCode === '+971' ? "5XXXXXXXX" : "XXXXXXXXXX"
+                  }
+                  className="w-full bg-transparent px-3 py-2.5 focus:outline-none text-white placeholder-gray-500 text-left font-mono font-bold text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="bg-cyan-950/40 p-2.5 rounded-xl border border-cyan-500/20 text-center text-xs text-cyan-300 flex items-center justify-center gap-1.5 mt-2">
+              <ShieldCheck size={16} className="text-emerald-400" />
+              <span>يتم إرسال كود التفعيل عبر رسالة نصية SMS 💬</span>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-cyan-500/25 transition duration-200 mt-4 text-xs cursor-pointer disabled:opacity-50"
+            >
+              {loading ? 'جاري التحميل...' : 'إرسال كود التحقق'}
+            </button>
+          </form>
+        )}
+
+        {step === 2 && (
+          <form onSubmit={handleVerifyOTP} className="space-y-5 text-center">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-white">أدخل رمز التحقق</h3>
+              <p className="text-xs text-gray-400">
+                تم إرسال كود من 6 أرقام إلى جوالك عبر رسالة نصية SMS 💬
+              </p>
+            </div>
+
+            <input
+              type="text"
+              maxLength="6"
+              value={otp}
+              onChange={e => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="000000"
+              autoFocus
+              className="w-full bg-slate-900 border border-cyan-500/40 rounded-xl px-4 py-3 text-center text-2xl font-bold tracking-[0.6em] focus:outline-none focus:border-cyan-400 transition text-cyan-400 font-mono"
+            />
+
+            <button
+              type="submit"
+              disabled={loading || otp.length < 6}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 rounded-xl shadow-lg transition duration-200 text-xs cursor-pointer disabled:opacity-50"
+            >
+              {loading ? 'جاري التحقق...' : 'تأكيد التسجيل'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep(1);
+                setOtp('');
+              }}
+              className="text-xs text-cyan-400 hover:text-cyan-300 transition cursor-pointer"
+            >
+              تعديل رقم الهاتف
+            </button>
+          </form>
+        )}
+
+        {step === 3 && (
+          <div className="text-center py-8 space-y-4">
+            <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-2xl animate-bounce">
+              ✓
+            </div>
+            <h3 className="text-xl font-bold text-white">تم التسجيل بنجاح!</h3>
+            <p className="text-xs text-gray-400">جاري تحويلك إلى منصة اتجاه التحليل الذكي...</p>
+          </div>
+        )}
       </div>
     </div>
   );
