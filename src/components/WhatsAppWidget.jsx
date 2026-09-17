@@ -539,9 +539,6 @@ export default function WhatsAppWidget() {
       setIsOpen(false);
       setIsExpanded(false);
       clearNotifications();
-      if (window.location.pathname !== '/') {
-        window.location.href = '/';
-      }
     }
   };
 
@@ -837,6 +834,13 @@ export default function WhatsAppWidget() {
 
       <div 
         ref={widgetRef} 
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setIsOpen(false);
+            setIsExpanded(false);
+            clearNotifications();
+          }
+        }}
         className={`fixed ${
           isExpanded 
             ? 'inset-0 z-[9999] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-2 sm:p-6' 
@@ -907,22 +911,29 @@ export default function WhatsAppWidget() {
               </div>
             </div>
 
-            {/* User Status Bar with Client Name & Interactive Phone Call Button */}
+            {/* User Status Bar with Client Name & Phone on right, Internal Call Alert button on left */}
             <div className="bg-cyan-950/40 px-4 py-2 border-b border-cyan-500/20 flex items-center justify-between text-[11px] shrink-0">
-              <div className="flex items-center gap-1.5 truncate max-w-[55%]">
-                <User size={13} className="text-cyan-400 shrink-0" />
-                <span className="font-bold text-cyan-200 truncate">{userName || 'عميل اتجاه'}</span>
+              {/* Right Side: Client Name + Phone Number underneath */}
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5 truncate">
+                  <User size={13} className="text-cyan-400 shrink-0" />
+                  <span className="font-bold text-cyan-200 truncate">{userName || 'عميل اتجاه'}</span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-cyan-400/90 font-mono mt-0.5" dir="ltr">
+                  <ShieldCheck size={12} className="text-emerald-400 shrink-0" title="حساب موثق بالـ OTP" />
+                  <span>{userPhone}</span>
+                </div>
               </div>
+
+              {/* Left Side: Standalone Internal Call Alert Trigger Button */}
               <button
                 type="button"
                 onClick={handleTriggerInternalCall}
-                className="flex items-center gap-1.5 font-mono text-cyan-300 text-[10px] bg-cyan-900/60 hover:bg-cyan-800/80 p-1 px-2.5 rounded-xl border border-cyan-400/40 shadow-md transition cursor-pointer active:scale-95"
-                title="إجراء اتصال داخلي وتنبيه الموظف 📞"
-                dir="ltr"
+                className="flex items-center gap-1.5 text-cyan-200 text-[11px] font-extrabold bg-gradient-to-r from-cyan-600/60 to-blue-600/60 hover:from-cyan-500 hover:to-blue-500 p-1.5 px-3 rounded-xl border border-cyan-400/50 shadow-md transition cursor-pointer active:scale-95 animate-pulse"
+                title="اضغط لإرسال تنبيه اتصال داخلي فوراً للموظف المختص 📞"
               >
-                <PhoneCall size={13} className="text-cyan-400 animate-pulse shrink-0" />
-                <span>{userPhone}</span>
-                <ShieldCheck size={13} className="text-emerald-400 ml-0.5 shrink-0" title="حساب موثق بالـ OTP" />
+                <PhoneCall size={14} className="text-cyan-300 shrink-0" />
+                <span>🔔 تنبيه اتصال داخلي</span>
               </button>
             </div>
 
@@ -935,7 +946,7 @@ export default function WhatsAppWidget() {
 
                 <form onSubmit={handleVerifyEmpCode} className="space-y-2.5">
                   <label className="block text-[11px] font-bold text-cyan-200">
-                    المتابعة مع موظف محدد (احصل على الكود من الموظف):
+                    المتابعة مع مختص ( ادخل كود الموظف المختص ):
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -966,7 +977,7 @@ export default function WhatsAppWidget() {
                   className="w-full flex items-center justify-between bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg transition-all text-xs border border-purple-400/40 cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
-                    <Headphones size={16} /> 🎧 لا أملك كود للموظف (خدمة العملاء)
+                    <Headphones size={16} /> 🎧 التواصل مع خدمة العملاء ( الدعم الفني )
                   </span>
                   <Sparkles size={14} className="text-amber-300" />
                 </button>

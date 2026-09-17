@@ -28,9 +28,20 @@ export default function Home({ onOpenRegister }) {
     <div className="home-page animate-fade-in relative z-10 py-6">
       
       {/* Hero Section */}
-      <section className="hero relative z-10 py-8 md:py-12">
-        <div className="container bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_25px_70px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-8 sm:p-12 rounded-3xl flex flex-col md:flex-row items-center gap-12 relative z-10 overflow-hidden">
-          <div className="hero-content w-full md:w-1/2 text-center md:text-right flex-1">
+      <section className="hero relative z-10 py-6 md:py-10">
+        <div className="container bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_25px_70px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-6 sm:p-10 rounded-3xl flex flex-col md:flex-row items-center gap-8 relative z-10 overflow-hidden">
+          
+          {/* Logo Box directly embedded in container */}
+          <div className="w-full md:w-5/12 flex justify-center items-center">
+            <img 
+              src={logoImg} 
+              alt="Etegah Logo" 
+              className="w-full max-w-sm sm:max-w-md rounded-2xl object-cover shadow-[0_15px_50px_rgba(0,0,0,0.8)] border border-cyan-400/30 transform hover:scale-[1.02] transition-all duration-500" 
+            />
+          </div>
+
+          {/* Hero Content on Right */}
+          <div className="hero-content w-full md:w-7/12 text-center md:text-right flex-1">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-xs font-bold mb-6 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
               <SparklesIcon /> مستقبل التداول الذكي في السوق السعودي والخليجي
             </div>
@@ -51,14 +62,7 @@ export default function Home({ onOpenRegister }) {
               </button>
             </div>
           </div>
-          
-          <div className="hero-visual w-full md:w-1/2 mt-6 md:mt-0 relative flex justify-center items-center">
-            {/* 3D Glassmorphism Logo Card Container */}
-            <div className="relative p-6 sm:p-8 bg-slate-900/60 backdrop-blur-2xl border border-cyan-500/30 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] border-t-2 border-t-cyan-400 transform hover:scale-[1.02] transition-all duration-500 z-10 group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-              <img src={logoImg} alt="Etegah Logo" className="relative w-full max-w-sm sm:max-w-md rounded-2xl object-cover shadow-2xl border border-white/20" />
-            </div>
-          </div>
+
         </div>
       </section>
 
