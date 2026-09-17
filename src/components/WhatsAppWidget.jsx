@@ -23,6 +23,7 @@ export default function WhatsAppWidget() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [hasUnread, setHasUnread] = useState(false);
+  const [toastAlert, setToastAlert] = useState(null);
 
   // Media & Reply & Emoji states
   const [pendingMedia, setPendingMedia] = useState(null);
@@ -36,6 +37,10 @@ export default function WhatsAppWidget() {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const prevMsgCountRef = useRef(0);
+  const titleIntervalRef = useRef(null);
+
+  const audioCtxRef = useRef(null);
+  const isInitialLoadRef = useRef(true);
 
   // Popular Emojis without SA text string
   const popularEmojis = [
@@ -44,11 +49,38 @@ export default function WhatsAppWidget() {
     '🛑', '✅', '❌', '💡', '🏆', '📈', '📉'
   ];
 
+  // Global user interaction listener to unlock AudioContext for sound alerts
+  useEffect(() => {
+    const unlockAudio = () => {
+      try {
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume();
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
+
   // Request Browser Push Notification permission on load
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
+  }, []);
+
+  // Clear Title Flasher interval on unmount
+  useEffect(() => {
+    return () => {
+      if (titleIntervalRef.current) clearInterval(titleIntervalRef.current);
+    };
   }, []);
 
   // Listen for custom trigger to open WhatsApp widget from anywhere in app
@@ -57,10 +89,11 @@ export default function WhatsAppWidget() {
       const phone = localStorage.getItem('visitorPhone') || '';
       if (!phone) {
         alert('يرجى تسجيل الدخول أولاً بالـ OTP لتأكيد حسابك وبدء التواصل المباشر 🔐');
-        window.location.href = '/login';
+        window.location.href = '/visitor-login';
         return;
       }
       setIsOpen(true);
+      clearNotifications();
     };
     window.addEventListener('open_whatsapp_widget', handleOpenWidget);
     return () => window.removeEventListener('open_whatsapp_widget', handleOpenWidget);
@@ -69,13 +102,19 @@ export default function WhatsAppWidget() {
   // Synthesize pleasant notification chime sound using Web Audio API
   const playChimeSound = () => {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
       osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -91,12 +130,42 @@ export default function WhatsAppWidget() {
     try {
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('منصة اتجاه التحليل الذكي 💬', {
-          body: msgText || 'رسالة جديدة من الدعم الفني',
+          body: msgText || 'رسالة جديدة من خدمة العملاء',
           icon: '/logo.jpg',
           tag: 'whatsapp_msg'
         });
       }
     } catch (e) {}
+  };
+
+  // Clear all unread notifications, title flasher & toast alerts
+  const clearNotifications = () => {
+    if (titleIntervalRef.current) {
+      clearInterval(titleIntervalRef.current);
+      titleIntervalRef.current = null;
+    }
+    document.title = 'اتجاه للتحليل الذكي';
+    setHasUnread(false);
+    setToastAlert(null);
+    window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: false } }));
+  };
+
+  // Trigger all notification alerts (sound, push, title flasher, in-app toast)
+  const triggerNotifications = (msgText) => {
+    playChimeSound();
+    triggerBrowserNotification(msgText);
+
+    setHasUnread(true);
+    setToastAlert(msgText);
+    window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: true } }));
+
+    // Flash browser tab title repeatedly
+    if (titleIntervalRef.current) clearInterval(titleIntervalRef.current);
+    let toggle = false;
+    titleIntervalRef.current = setInterval(() => {
+      document.title = toggle ? '(1) رسالة جديدة 💬' : '🔔 اتجاه للتحليل الذكي';
+      toggle = !toggle;
+    }, 1000);
   };
 
   // Check login authentication state from localStorage & Firestore
@@ -107,7 +176,6 @@ export default function WhatsAppWidget() {
     setUserName(name);
 
     if (phone) {
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
       getDocs(query(collection(db, 'بيانات_تسجيل_العملاء'), where('phoneNumber', '==', phone)))
         .then((snap) => {
           if (!snap.empty) {
@@ -170,7 +238,20 @@ export default function WhatsAppWidget() {
   useEffect(() => {
     if (!userPhone) return;
     const cleanPhone = userPhone.replace(/[^0-9]/g, '');
-    const possibleIds = Array.from(new Set([cleanPhone, userPhone, `+${cleanPhone}`, `chat_${cleanPhone}`]));
+    let localPhone = '';
+    if (cleanPhone.startsWith('9665')) {
+      localPhone = '0' + cleanPhone.substring(3);
+    } else if (cleanPhone.startsWith('9715')) {
+      localPhone = '0' + cleanPhone.substring(3);
+    }
+
+    const possibleIds = Array.from(new Set([
+      cleanPhone, 
+      userPhone, 
+      `+${cleanPhone}`, 
+      `chat_${cleanPhone}`,
+      localPhone
+    ])).filter(Boolean);
 
     const q1 = query(
       collection(db, 'رسائل_الموظفين_للعملاء'),
@@ -208,21 +289,19 @@ export default function WhatsAppWidget() {
 
       setMessages(msgList);
 
-      // Play sound notification & browser push for staff responses
-      if (msgList.length > prevMsgCountRef.current) {
-        const lastMsg = msgList[msgList.length - 1];
-        if (lastMsg && (lastMsg.sender === 'staff' || lastMsg.sender === 'employee' || lastMsg.sender === 'admin' || lastMsg.sender === 'agent')) {
-          playChimeSound();
-          triggerBrowserNotification(lastMsg.text || 'رسالة جديدة من خدمة العملاء');
-          
-          if (!isOpen) {
-            setHasUnread(true);
-            document.title = '(1) رسالة جديدة 💬 - اتجاه للتحليل الذكي';
-            window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: true } }));
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
+        prevMsgCountRef.current = msgList.length;
+      } else {
+        // Play sound notification & browser push for new staff responses
+        if (msgList.length > prevMsgCountRef.current) {
+          const lastMsg = msgList[msgList.length - 1];
+          if (lastMsg && (lastMsg.sender === 'staff' || lastMsg.sender === 'employee' || lastMsg.sender === 'admin' || lastMsg.sender === 'agent')) {
+            triggerNotifications(lastMsg.text || 'رسالة جديدة من خدمة العملاء');
           }
         }
+        prevMsgCountRef.current = msgList.length;
       }
-      prevMsgCountRef.current = msgList.length;
     };
 
     let s1 = null;
@@ -248,8 +327,7 @@ export default function WhatsAppWidget() {
   useEffect(() => {
     if (isOpen && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      setHasUnread(false);
-      window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: false } }));
+      clearNotifications();
     }
   }, [messages, isOpen]);
 
@@ -261,8 +339,7 @@ export default function WhatsAppWidget() {
       return;
     }
     setIsOpen(!isOpen);
-    setHasUnread(false);
-    window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: false } }));
+    clearNotifications();
   };
 
   // Back Button Navigation inside Widget
@@ -272,6 +349,7 @@ export default function WhatsAppWidget() {
     } else {
       setIsOpen(false);
       setIsExpanded(false);
+      clearNotifications();
     }
   };
 
@@ -509,351 +587,377 @@ export default function WhatsAppWidget() {
   };
 
   return (
-    <div 
-      ref={widgetRef} 
-      className={`fixed ${
-        isExpanded 
-          ? 'inset-0 z-[9999] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-2 sm:p-6' 
-          : 'bottom-4 left-4 sm:bottom-6 sm:left-6 z-50'
-      } font-sans transition-all duration-300`} 
-      dir="rtl"
-    >
-      {/* Hidden File Input */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileSelect} 
-        accept="image/*,.pdf,.doc,.docx,.txt" 
-        className="hidden" 
-      />
-
-      {/* Main Chat Modal */}
-      {isOpen && (
-        <div className={`${
-          isExpanded 
-            ? 'w-full max-w-4xl h-[92vh] rounded-3xl' 
-            : 'mb-3 w-[calc(100vw-32px)] max-w-88 sm:max-w-96 rounded-3xl h-[520px]'
-        } bg-slate-950/95 backdrop-blur-2xl border border-cyan-500/30 text-white shadow-[0_20px_80px_rgba(0,0,0,0.9)] flex flex-col relative overflow-hidden animate-fade-in border-t-2 border-t-cyan-400`}>
-          
-          {/* Header */}
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-4 py-3 border-b border-white/10 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <img src="/logo.jpg" alt="Logo" className="w-9 h-9 rounded-full object-cover border-2 border-cyan-400 shadow-md" />
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900"></span>
-              </div>
-              <div>
-                <h4 className="font-bold text-xs sm:text-sm text-white flex items-center gap-1">
-                  منصة اتجاه التحليل الذكي
-                </h4>
-                <p className="text-[10px] text-cyan-300 font-semibold flex items-center gap-1">
-                  {assignedEmp ? `💬 ${assignedEmp.name}` : 'تواصل مباشر ومعاينة لحظية ⚡'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              {/* Back Arrow Button */}
-              <button
-                onClick={handleBackButtonClick}
-                className="text-gray-400 hover:text-cyan-300 transition p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
-                title="رجوع للخلف"
-              >
-                <ArrowRight size={18} />
-              </button>
-
-              {/* Expand / Fullscreen Toggle Button */}
-              <button 
-                onClick={() => setIsExpanded(!isExpanded)} 
-                className="text-gray-400 hover:text-cyan-300 transition p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
-                title={isExpanded ? 'تصغير الشاشة' : 'توسيع بملء الصفحة'}
-              >
-                {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-              </button>
-
-              {/* Close Button */}
-              <button 
-                onClick={() => { setIsOpen(false); setIsExpanded(false); }} 
-                className="text-gray-400 hover:text-white transition p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
+    <>
+      {/* In-App Floating Toast Alert Banner */}
+      {toastAlert && !isOpen && (
+        <div 
+          onClick={() => { setIsOpen(true); clearNotifications(); }}
+          className="fixed top-20 right-4 sm:right-6 z-[9999] bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-2 border-cyan-400 text-white px-4 py-3 rounded-2xl shadow-[0_10px_35px_rgba(6,182,212,0.5)] flex items-center gap-3 cursor-pointer animate-bounce max-w-sm"
+        >
+          <div className="w-9 h-9 rounded-full bg-cyan-500/20 border border-cyan-400 flex items-center justify-center shrink-0">
+            <MessageCircle size={20} className="text-cyan-300" />
           </div>
-
-          {/* User Status Bar with Client Name & Phone */}
-          <div className="bg-cyan-950/40 px-4 py-2 border-b border-cyan-500/20 flex items-center justify-between text-[11px] shrink-0">
-            <div className="flex items-center gap-1.5 truncate max-w-[55%]">
-              <User size={13} className="text-cyan-400 shrink-0" />
-              <span className="font-bold text-cyan-200 truncate">{userName || 'عميل اتجاه'}</span>
-            </div>
-            <div className="flex items-center gap-1 font-mono text-cyan-300 text-[10px]" dir="ltr">
-              <Phone size={12} className="text-cyan-400 shrink-0" />
-              <span>{userPhone}</span>
-              <ShieldCheck size={13} className="text-emerald-400 ml-1 shrink-0" title="حساب موثق بالـ OTP" />
-            </div>
+          <div className="flex-1 min-w-0">
+            <h5 className="font-bold text-xs text-cyan-300 flex items-center gap-1">
+              رسالة جديدة من خدمة العملاء 💬
+            </h5>
+            <p className="text-[11px] text-gray-200 truncate">{toastAlert}</p>
           </div>
-
-          {/* Step 1: Code Input / Selection */}
-          {widgetStep === 'code_input' && (
-            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
-              <div className="bg-white/5 p-3 rounded-2xl border border-white/10 text-xs text-gray-300 leading-relaxed">
-                أهلاً بك <strong className="text-white">{userName}</strong>! يرجى إدخال كود الموظف المباشر للتواصل معه، أو الاختيار المباشر لخدمة العملاء:
-              </div>
-
-              <form onSubmit={handleVerifyEmpCode} className="space-y-2.5">
-                <label className="block text-[11px] font-bold text-cyan-200">
-                  المتابعة مع موظف محدد (احصل على الكود من الموظف):
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={empCodeInput}
-                    onChange={(e) => setEmpCodeInput(e.target.value)}
-                    placeholder="أدخل كود الموظف..."
-                    className="flex-1 bg-slate-900 border border-cyan-500/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 font-mono"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isVerifyingCode}
-                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {isVerifyingCode ? 'جاري الفحص...' : 'دخول'}
-                  </button>
-                </div>
-                {codeError && <p className="text-[10px] text-rose-400 font-semibold">{codeError}</p>}
-              </form>
-
-              <div className="relative my-2">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-                <div className="relative flex justify-center text-[10px]"><span className="bg-slate-950 px-2 text-gray-400">أو</span></div>
-              </div>
-
-              <button
-                onClick={handleConnectCustomerService}
-                className="w-full flex items-center justify-between bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg transition-all text-xs border border-purple-400/40 cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <Headphones size={16} /> 🎧 لا أملك كود للموظف (خدمة العملاء)
-                </span>
-                <Sparkles size={14} className="text-amber-300" />
-              </button>
-            </div>
-          )}
-
-          {/* Step 2: Live Chat Room */}
-          {widgetStep === 'chat_room' && (
-            <div className="flex flex-col flex-1 min-h-0 relative">
-              
-              {/* 3D Glassmorphism Logo Watermark Background */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden opacity-10">
-                <img 
-                  src="/logo.jpg" 
-                  alt="3D Logo Watermark" 
-                  className="w-48 h-48 sm:w-64 sm:h-64 rounded-full object-cover shadow-[0_0_80px_rgba(6,182,212,0.6)] backdrop-blur-xl border-4 border-cyan-400/30 transform rotate-12 scale-125" 
-                />
-              </div>
-
-              {/* Message List */}
-              <div 
-                onClick={() => setShowEmojiPicker(false)}
-                className="flex-1 p-3.5 space-y-3 overflow-y-auto custom-scrollbar relative z-10"
-              >
-                {messages.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400 text-xs">
-                    <p className="mb-2">👋 مرحباً بك! أرسل استفسارك وسيجيبك الموظف فوراً.</p>
-                    <span className="inline-block bg-white/5 border border-white/10 px-3 py-1 rounded-full text-[10px] text-cyan-300">
-                      متصل مع: {assignedEmp?.name}
-                    </span>
-                  </div>
-                ) : (
-                  messages.map((msg, idx) => {
-                    const isClient = msg.sender === 'client';
-                    return (
-                      <div key={msg.id || idx} className={`group flex flex-col ${isClient ? 'items-end' : 'items-start'} relative`}>
-                        <div className={`relative ${isExpanded ? 'max-w-md sm:max-w-xl' : 'max-w-[85%]'} p-3 rounded-2xl text-xs leading-relaxed shadow-lg ${
-                          isClient 
-                            ? 'bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white rounded-br-none border border-cyan-400/30' 
-                            : 'bg-slate-900/90 text-gray-100 border border-white/15 rounded-bl-none'
-                        }`}>
-                          
-                          {/* Reply Context Bubble */}
-                          {msg.replyTo && (
-                            <div className="mb-2 p-1.5 rounded-lg bg-black/30 border-r-2 border-cyan-300 text-[10px] text-cyan-200 truncate">
-                              <span className="font-bold block text-cyan-300">
-                                ↩️ الرد على ({msg.replyTo.sender === 'client' ? 'رسالتك' : 'الموظف'}):
-                              </span>
-                              <span className="opacity-90">{msg.replyTo.text}</span>
-                            </div>
-                          )}
-
-                          {/* Media Preview (Image or Document) */}
-                          {msg.mediaUrl && (
-                            <div className="my-1.5">
-                              {msg.mediaType === 'image' ? (
-                                <img 
-                                  src={msg.mediaUrl} 
-                                  alt="Attachment" 
-                                  onClick={() => window.open(msg.mediaUrl, '_blank')}
-                                  className="rounded-xl max-h-56 max-w-full object-cover border border-white/20 hover:opacity-90 transition cursor-pointer"
-                                />
-                              ) : (
-                                <a 
-                                  href={msg.mediaUrl} 
-                                  download={msg.mediaName || 'file'}
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 p-2 rounded-xl bg-white/10 border border-white/20 text-cyan-200 hover:bg-white/20 transition text-xs"
-                                >
-                                  <FileText size={16} />
-                                  <span className="truncate max-w-[150px]">{msg.mediaName || 'تحميل المستند'}</span>
-                                  <Download size={14} className="ml-auto shrink-0" />
-                                </a>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Message Text */}
-                          {msg.text && <p className="whitespace-pre-wrap break-words">{msg.text}</p>}
-
-                          {/* Inline Reply Trigger Icon */}
-                          <button
-                            onClick={() => setReplyToMessage(msg)}
-                            className="absolute -top-2 left-1 opacity-0 group-hover:opacity-100 transition bg-slate-800 border border-cyan-400/40 text-cyan-300 hover:text-white p-1 rounded-full text-[9px] cursor-pointer"
-                            title="إعادة توجيه / ريبلاي"
-                          >
-                            <Reply size={11} />
-                          </button>
-                        </div>
-
-                        {/* Timestamp & Status */}
-                        <div className="flex items-center gap-1 mt-0.5 px-1 text-[9px] text-gray-400">
-                          <span>
-                            {msg.tsMs ? new Date(msg.tsMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                          </span>
-                          {isClient && <CheckCheck size={11} className="text-cyan-400" />}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Emoji Picker Popover */}
-              {showEmojiPicker && (
-                <div 
-                  ref={emojiPickerRef}
-                  className="absolute bottom-16 right-3 left-3 z-30 p-2.5 bg-slate-900 border border-cyan-500/40 rounded-2xl shadow-2xl grid grid-cols-8 gap-1 text-base animate-fade-in"
-                >
-                  {popularEmojis.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => handleEmojiSelect(emoji)}
-                      className="p-1.5 hover:bg-white/10 rounded-xl transition cursor-pointer text-center"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Reply Preview Bar */}
-              {replyToMessage && (
-                <div className="px-3 py-1.5 bg-cyan-950/80 border-t border-cyan-500/30 flex items-center justify-between text-xs text-cyan-200 z-20 shrink-0">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <Reply size={13} className="text-cyan-400 shrink-0" />
-                    <span className="truncate">الرد على: {replyToMessage.text || 'مرفق'}</span>
-                  </div>
-                  <button onClick={() => setReplyToMessage(null)} className="text-gray-400 hover:text-white cursor-pointer p-0.5">
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-
-              {/* Pending Media Preview Bar */}
-              {pendingMedia && (
-                <div className="px-3 py-1.5 bg-slate-900 border-t border-cyan-500/30 flex items-center justify-between text-xs text-emerald-300 z-20 shrink-0">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <Paperclip size={13} className="shrink-0" />
-                    <span className="truncate">{pendingMedia.name}</span>
-                  </div>
-                  <button onClick={() => setPendingMedia(null)} className="text-rose-400 hover:text-rose-300 cursor-pointer p-0.5">
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-
-              {/* Chat Input Form */}
-              <form onSubmit={handleSendMessage} className="p-2.5 bg-slate-950 border-t border-white/10 flex items-center gap-1.5 relative z-20 shrink-0">
-                
-                {/* File Attachment Button */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-gray-400 hover:text-cyan-300 transition p-2 rounded-xl hover:bg-white/10 cursor-pointer"
-                  title="إرفاق صورة أو مستند"
-                >
-                  <Paperclip size={17} />
-                </button>
-
-                {/* Emoji Button */}
-                <button
-                  ref={emojiBtnRef}
-                  type="button"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className="text-gray-400 hover:text-amber-300 transition p-2 rounded-xl hover:bg-white/10 cursor-pointer"
-                  title="إيموجي"
-                >
-                  <Smile size={17} />
-                </button>
-
-                {/* Text Input */}
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="اكتب رسالتك هنا... (اضغط Enter للإرسال)"
-                  className="flex-1 bg-slate-900 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400"
-                />
-
-                {/* Send Button */}
-                <button
-                  type="submit"
-                  disabled={!inputText.trim() && !pendingMedia}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white p-2.5 rounded-xl transition shadow-md cursor-pointer disabled:opacity-40"
-                  title="إرسال"
-                >
-                  <Send size={16} />
-                </button>
-              </form>
-            </div>
-          )}
-
+          <button 
+            onClick={(e) => { e.stopPropagation(); setToastAlert(null); }} 
+            className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/10"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 
-      {/* Floating Trigger Button */}
-      {!isExpanded && (
-        <button
-          onClick={handleTriggerClick}
-          className="relative flex items-center gap-2 bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 hover:from-green-400 hover:to-teal-500 text-white font-black px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(16,185,129,0.5)] border-2 border-emerald-300 transition-all transform hover:scale-105 active:scale-95 cursor-pointer z-50"
-        >
-          <MessageCircle size={22} className="animate-bounce shrink-0" />
-          <span className="text-xs tracking-wide whitespace-nowrap">تواصل معنا</span>
-          
-          {/* Red Notification Badge */}
-          {hasUnread && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-white text-[9px] font-bold items-center justify-center">!</span>
-            </span>
-          )}
-        </button>
-      )}
-    </div>
+      <div 
+        ref={widgetRef} 
+        className={`fixed ${
+          isExpanded 
+            ? 'inset-0 z-[9999] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-2 sm:p-6' 
+            : 'bottom-4 left-4 sm:bottom-6 sm:left-6 z-50'
+        } font-sans transition-all duration-300`} 
+        dir="rtl"
+      >
+        {/* Hidden File Input */}
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleFileSelect} 
+          accept="image/*,.pdf,.doc,.docx,.txt" 
+          className="hidden" 
+        />
+
+        {/* Main Chat Modal */}
+        {isOpen && (
+          <div className={`${
+            isExpanded 
+              ? 'w-full max-w-4xl h-[92vh] rounded-3xl' 
+              : 'mb-3 w-[calc(100vw-32px)] max-w-88 sm:max-w-96 rounded-3xl h-[520px]'
+          } bg-slate-950/95 backdrop-blur-2xl border border-cyan-500/30 text-white shadow-[0_20px_80px_rgba(0,0,0,0.9)] flex flex-col relative overflow-hidden animate-fade-in border-t-2 border-t-cyan-400`}>
+            
+            {/* Header */}
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-4 py-3 border-b border-white/10 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <img src="/logo.jpg" alt="Logo" className="w-9 h-9 rounded-full object-cover border-2 border-cyan-400 shadow-md" />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900"></span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs sm:text-sm text-white flex items-center gap-1">
+                    منصة اتجاه التحليل الذكي
+                  </h4>
+                  <p className="text-[10px] text-cyan-300 font-semibold flex items-center gap-1">
+                    {assignedEmp ? `💬 ${assignedEmp.name}` : 'تواصل مباشر ومعاينة لحظية ⚡'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                {/* Back Arrow Button */}
+                <button
+                  onClick={handleBackButtonClick}
+                  className="text-gray-400 hover:text-cyan-300 transition p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
+                  title="رجوع للخلف"
+                >
+                  <ArrowRight size={18} />
+                </button>
+
+                {/* Expand / Fullscreen Toggle Button */}
+                <button 
+                  onClick={() => setIsExpanded(!isExpanded)} 
+                  className="text-gray-400 hover:text-cyan-300 transition p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
+                  title={isExpanded ? 'تصغير الشاشة' : 'توسيع بملء الصفحة'}
+                >
+                  {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                </button>
+
+                {/* Close Button */}
+                <button 
+                  onClick={() => { setIsOpen(false); setIsExpanded(false); clearNotifications(); }} 
+                  className="text-gray-400 hover:text-white transition p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* User Status Bar with Client Name & Phone */}
+            <div className="bg-cyan-950/40 px-4 py-2 border-b border-cyan-500/20 flex items-center justify-between text-[11px] shrink-0">
+              <div className="flex items-center gap-1.5 truncate max-w-[55%]">
+                <User size={13} className="text-cyan-400 shrink-0" />
+                <span className="font-bold text-cyan-200 truncate">{userName || 'عميل اتجاه'}</span>
+              </div>
+              <div className="flex items-center gap-1 font-mono text-cyan-300 text-[10px]" dir="ltr">
+                <Phone size={12} className="text-cyan-400 shrink-0" />
+                <span>{userPhone}</span>
+                <ShieldCheck size={13} className="text-emerald-400 ml-1 shrink-0" title="حساب موثق بالـ OTP" />
+              </div>
+            </div>
+
+            {/* Step 1: Code Input / Selection */}
+            {widgetStep === 'code_input' && (
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
+                <div className="bg-white/5 p-3 rounded-2xl border border-white/10 text-xs text-gray-300 leading-relaxed">
+                  أهلاً بك <strong className="text-white">{userName}</strong>! يرجى إدخال كود الموظف المباشر للتواصل معه، أو الاختيار المباشر لخدمة العملاء:
+                </div>
+
+                <form onSubmit={handleVerifyEmpCode} className="space-y-2.5">
+                  <label className="block text-[11px] font-bold text-cyan-200">
+                    المتابعة مع موظف محدد (احصل على الكود من الموظف):
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={empCodeInput}
+                      onChange={(e) => setEmpCodeInput(e.target.value)}
+                      placeholder="أدخل كود الموظف..."
+                      className="flex-1 bg-slate-900 border border-cyan-500/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 font-mono"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isVerifyingCode}
+                      className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {isVerifyingCode ? 'جاري الفحص...' : 'دخول'}
+                    </button>
+                  </div>
+                  {codeError && <p className="text-[10px] text-rose-400 font-semibold">{codeError}</p>}
+                </form>
+
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+                  <div className="relative flex justify-center text-[10px]"><span className="bg-slate-950 px-2 text-gray-400">أو</span></div>
+                </div>
+
+                <button
+                  onClick={handleConnectCustomerService}
+                  className="w-full flex items-center justify-between bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg transition-all text-xs border border-purple-400/40 cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <Headphones size={16} /> 🎧 لا أملك كود للموظف (خدمة العملاء)
+                  </span>
+                  <Sparkles size={14} className="text-amber-300" />
+                </button>
+              </div>
+            )}
+
+            {/* Step 2: Live Chat Room */}
+            {widgetStep === 'chat_room' && (
+              <div className="flex flex-col flex-1 min-h-0 relative">
+                
+                {/* 3D Glassmorphism Logo Watermark Background */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden opacity-10">
+                  <img 
+                    src="/logo.jpg" 
+                    alt="3D Logo Watermark" 
+                    className="w-48 h-48 sm:w-64 sm:h-64 rounded-full object-cover shadow-[0_0_80px_rgba(6,182,212,0.6)] backdrop-blur-xl border-4 border-cyan-400/30 transform rotate-12 scale-125" 
+                  />
+                </div>
+
+                {/* Message List */}
+                <div 
+                  onClick={() => setShowEmojiPicker(false)}
+                  className="flex-1 p-3.5 space-y-3 overflow-y-auto custom-scrollbar relative z-10"
+                >
+                  {messages.length === 0 ? (
+                    <div className="text-center py-12 text-gray-400 text-xs">
+                      <p className="mb-2">👋 مرحباً بك! أرسل استفسارك وسيجيبك الموظف فوراً.</p>
+                      <span className="inline-block bg-white/5 border border-white/10 px-3 py-1 rounded-full text-[10px] text-cyan-300">
+                        متصل مع: {assignedEmp?.name}
+                      </span>
+                    </div>
+                  ) : (
+                    messages.map((msg, idx) => {
+                      const isClient = msg.sender === 'client';
+                      return (
+                        <div key={msg.id || idx} className={`group flex flex-col ${isClient ? 'items-end' : 'items-start'} relative`}>
+                          <div className={`relative ${isExpanded ? 'max-w-md sm:max-w-xl' : 'max-w-[85%]'} p-3 rounded-2xl text-xs leading-relaxed shadow-lg ${
+                            isClient 
+                              ? 'bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white rounded-br-none border border-cyan-400/30' 
+                              : 'bg-slate-900/90 text-gray-100 border border-white/15 rounded-bl-none'
+                          }`}>
+                            
+                            {/* Reply Context Bubble */}
+                            {msg.replyTo && (
+                              <div className="mb-2 p-1.5 rounded-lg bg-black/30 border-r-2 border-cyan-300 text-[10px] text-cyan-200 truncate">
+                                <span className="font-bold block text-cyan-300">
+                                  ↩️ الرد على ({msg.replyTo.sender === 'client' ? 'رسالتك' : 'الموظف'}):
+                                </span>
+                                <span className="opacity-90">{msg.replyTo.text}</span>
+                              </div>
+                            )}
+
+                            {/* Media Preview (Image or Document) */}
+                            {msg.mediaUrl && (
+                              <div className="my-1.5">
+                                {msg.mediaType === 'image' ? (
+                                  <img 
+                                    src={msg.mediaUrl} 
+                                    alt="Attachment" 
+                                    onClick={() => window.open(msg.mediaUrl, '_blank')}
+                                    className="rounded-xl max-h-56 max-w-full object-cover border border-white/20 hover:opacity-90 transition cursor-pointer"
+                                  />
+                                ) : (
+                                  <a 
+                                    href={msg.mediaUrl} 
+                                    download={msg.mediaName || 'file'}
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-2 rounded-xl bg-white/10 border border-white/20 text-cyan-200 hover:bg-white/20 transition text-xs"
+                                  >
+                                    <FileText size={16} />
+                                    <span className="truncate max-w-[150px]">{msg.mediaName || 'تحميل المستند'}</span>
+                                    <Download size={14} className="ml-auto shrink-0" />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Message Text */}
+                            {msg.text && <p className="whitespace-pre-wrap break-words">{msg.text}</p>}
+
+                            {/* Inline Reply Trigger Icon */}
+                            <button
+                              onClick={() => setReplyToMessage(msg)}
+                              className="absolute -top-2 left-1 opacity-0 group-hover:opacity-100 transition bg-slate-800 border border-cyan-400/40 text-cyan-300 hover:text-white p-1 rounded-full text-[9px] cursor-pointer"
+                              title="إعادة توجيه / ريبلاي"
+                            >
+                              <Reply size={11} />
+                            </button>
+                          </div>
+
+                          {/* Timestamp & Status */}
+                          <div className="flex items-center gap-1 mt-0.5 px-1 text-[9px] text-gray-400">
+                            <span>
+                              {msg.tsMs ? new Date(msg.tsMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
+                            {isClient && <CheckCheck size={11} className="text-cyan-400" />}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Emoji Picker Popover */}
+                {showEmojiPicker && (
+                  <div 
+                    ref={emojiPickerRef}
+                    className="absolute bottom-16 right-3 left-3 z-30 p-2.5 bg-slate-900 border border-cyan-500/40 rounded-2xl shadow-2xl grid grid-cols-8 gap-1 text-base animate-fade-in"
+                  >
+                    {popularEmojis.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => handleEmojiSelect(emoji)}
+                        className="p-1.5 hover:bg-white/10 rounded-xl transition cursor-pointer text-center"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Reply Preview Bar */}
+                {replyToMessage && (
+                  <div className="px-3 py-1.5 bg-cyan-950/80 border-t border-cyan-500/30 flex items-center justify-between text-xs text-cyan-200 z-20 shrink-0">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Reply size={13} className="text-cyan-400 shrink-0" />
+                      <span className="truncate">الرد على: {replyToMessage.text || 'مرفق'}</span>
+                    </div>
+                    <button onClick={() => setReplyToMessage(null)} className="text-gray-400 hover:text-white cursor-pointer p-0.5">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Pending Media Preview Bar */}
+                {pendingMedia && (
+                  <div className="px-3 py-1.5 bg-slate-900 border-t border-cyan-500/30 flex items-center justify-between text-xs text-emerald-300 z-20 shrink-0">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Paperclip size={13} className="shrink-0" />
+                      <span className="truncate">{pendingMedia.name}</span>
+                    </div>
+                    <button onClick={() => setPendingMedia(null)} className="text-rose-400 hover:text-rose-300 cursor-pointer p-0.5">
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Chat Input Form */}
+                <form onSubmit={handleSendMessage} className="p-2.5 bg-slate-950 border-t border-white/10 flex items-center gap-1.5 relative z-20 shrink-0">
+                  
+                  {/* File Attachment Button */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-gray-400 hover:text-cyan-300 transition p-2 rounded-xl hover:bg-white/10 cursor-pointer"
+                    title="إرفاق صورة أو مستند"
+                  >
+                    <Paperclip size={17} />
+                  </button>
+
+                  {/* Emoji Button */}
+                  <button
+                    ref={emojiBtnRef}
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="text-gray-400 hover:text-amber-300 transition p-2 rounded-xl hover:bg-white/10 cursor-pointer"
+                    title="إيموجي"
+                  >
+                    <Smile size={17} />
+                  </button>
+
+                  {/* Text Input */}
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="اكتب رسالتك هنا... (اضغط Enter للإرسال)"
+                    className="flex-1 bg-slate-900 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400"
+                  />
+
+                  {/* Send Button */}
+                  <button
+                    type="submit"
+                    disabled={!inputText.trim() && !pendingMedia}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white p-2.5 rounded-xl transition shadow-md cursor-pointer disabled:opacity-40"
+                    title="إرسال"
+                  >
+                    <Send size={16} />
+                  </button>
+                </form>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* Floating Trigger Button */}
+        {!isExpanded && (
+          <button
+            onClick={handleTriggerClick}
+            className="relative flex items-center gap-2 bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 hover:from-green-400 hover:to-teal-500 text-white font-black px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(16,185,129,0.5)] border-2 border-emerald-300 transition-all transform hover:scale-105 active:scale-95 cursor-pointer z-50"
+          >
+            <MessageCircle size={22} className="animate-bounce shrink-0" />
+            <span className="text-xs tracking-wide whitespace-nowrap">تواصل معنا</span>
+            
+            {/* Red Notification Badge */}
+            {hasUnread && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-white text-[9px] font-bold items-center justify-center">!</span>
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+    </>
   );
 }
