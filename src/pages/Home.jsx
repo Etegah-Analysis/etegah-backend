@@ -130,28 +130,34 @@ export default function Home({ onOpenRegister }) {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-cyan-500/30 p-6 rounded-3xl shadow-xl hover:border-cyan-400/60 transition duration-300 flex flex-col">
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center mb-4 text-cyan-300">
-              <BarChart3 size={24} />
+          <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.2)] border-t-2 border-t-cyan-400 p-6 sm:p-8 rounded-3xl hover:scale-[1.03] transition-all duration-500 flex flex-col justify-between">
+            <div>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-400/50 flex items-center justify-center mb-5 text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.4)]">
+                <BarChart3 size={26} />
+              </div>
+              <h3 className="font-extrabold text-white text-xl mb-3">تحليل اتجاه فوري</h3>
+              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">رصد دقيق لاتجاهات السوق وتغيراتها قبل الجميع باستخدام خوارزميات تعلم الآلة والذكاء الاصطناعي.</p>
             </div>
-            <h3 className="font-bold text-white text-lg mb-2">تحليل اتجاه فوري</h3>
-            <p className="text-xs text-gray-300 leading-relaxed">رصد دقيق لاتجاهات السوق وتغيراتها قبل الجميع باستخدام خوارزميات تعلم الآلة والذكاء الاصطناعي.</p>
           </div>
           
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-cyan-500/30 p-6 rounded-3xl shadow-xl hover:border-cyan-400/60 transition duration-300 flex flex-col">
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center mb-4 text-cyan-300">
-              <Target size={24} />
+          <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.2)] border-t-2 border-t-cyan-400 p-6 sm:p-8 rounded-3xl hover:scale-[1.03] transition-all duration-500 flex flex-col justify-between">
+            <div>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-400/50 flex items-center justify-center mb-5 text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.4)]">
+                <Target size={26} />
+              </div>
+              <h3 className="font-extrabold text-white text-xl mb-3">نقاط دخول وخروج</h3>
+              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">تحديد مستويات الدعم والمقاومة الحرجة ونقاط الانعكاس المحتملة بدقة متناهية.</p>
             </div>
-            <h3 className="font-bold text-white text-lg mb-2">نقاط دخول وخروج</h3>
-            <p className="text-xs text-gray-300 leading-relaxed">تحديد مستويات الدعم والمقاومة الحرجة ونقاط الانعكاس المحتملة بدقة متناهية.</p>
           </div>
           
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-cyan-500/30 p-6 rounded-3xl shadow-xl hover:border-cyan-400/60 transition duration-300 flex flex-col">
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center mb-4 text-cyan-300">
-              <ShieldCheck size={24} />
+          <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.2)] border-t-2 border-t-cyan-400 p-6 sm:p-8 rounded-3xl hover:scale-[1.03] transition-all duration-500 flex flex-col justify-between">
+            <div>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-400/50 flex items-center justify-center mb-5 text-cyan-300 shadow-[0_0_25px_rgba(6,182,212,0.4)]">
+                <ShieldCheck size={26} />
+              </div>
+              <h3 className="font-extrabold text-white text-xl mb-3">إدارة المخاطر</h3>
+              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">أدوات متطورة لتقييم مخاطر المحفظة وتقديم توصيات ذكية للحفاظ على رأس المال واستدامته.</p>
             </div>
-            <h3 className="font-bold text-white text-lg mb-2">إدارة المخاطر</h3>
-            <p className="text-xs text-gray-300 leading-relaxed">أدوات متطورة لتقييم مخاطر المحفظة وتقديم توصيات ذكية للحفاظ على رأس المال واستدامته.</p>
           </div>
         </div>
       </section>

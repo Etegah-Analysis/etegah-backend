@@ -85,26 +85,26 @@ export default function Navbar() {
               <div className="user-badge-box flex items-center gap-2">
                 <button 
                   onClick={handleOpenChat}
-                  className="user-name font-bold text-cyan-300 hover:text-cyan-200 flex items-center gap-1.5 cursor-pointer relative"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-xl border border-cyan-500/40 text-cyan-300 hover:text-cyan-200 font-extrabold flex items-center gap-1.5 shadow-[0_4px_15px_rgba(6,182,212,0.25)] hover:border-cyan-400 transition cursor-pointer relative text-xs sm:text-sm"
                   title="فتح الواتساب"
                 >
-                  <User size={16} /> 
+                  <User size={15} className="text-cyan-400 shrink-0" /> 
                   <span>{visitorName}</span>
                   {hasUnreadMsg && (
-                    <span className="flex h-3 w-3 relative">
+                    <span className="flex h-3 w-3 relative ml-0.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
                     </span>
                   )}
                 </button>
-                <button onClick={handleLogout} className="logout-btn-nav">
+                <button onClick={handleLogout} className="px-3 py-1.5 rounded-xl bg-rose-950/60 backdrop-blur-xl border border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-900/80 font-bold transition text-xs flex items-center gap-1 cursor-pointer shadow-sm">
                   <LogOut size={14} /> خروج
                 </button>
               </div>
             ) : (
               <Link 
                 to="/visitor-login" 
-                className="login-btn-nav" 
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-[0_4px_15px_rgba(6,182,212,0.3)] border border-cyan-300/40 transition" 
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 تسجيل الدخول

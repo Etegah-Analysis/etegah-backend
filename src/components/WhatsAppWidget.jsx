@@ -138,7 +138,51 @@ export default function WhatsAppWidget() {
     } catch (e) {}
   };
 
-  // Clear all unread notifications, title flasher & toast alerts
+  // Update browser favicon dynamically with red badge
+  const updateFaviconBadge = (hasUnread) => {
+    try {
+      let link = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+
+      if (!hasUnread) {
+        link.href = '/logo.jpg';
+        return;
+      }
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = '/logo.jpg';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.beginPath();
+        ctx.arc(32, 32, 30, 0, Math.PI * 2, true);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(img, 0, 0, 64, 64);
+
+        // Draw glowing red notification badge in top-right corner
+        ctx.beginPath();
+        ctx.arc(50, 14, 11, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#ef4444';
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        link.href = canvas.toDataURL('image/png');
+      };
+    } catch (e) {}
+  };
+
+  // Clear all unread notifications, title flasher, favicon badge & toast alerts
   const clearNotifications = () => {
     if (titleIntervalRef.current) {
       clearInterval(titleIntervalRef.current);
@@ -146,16 +190,18 @@ export default function WhatsAppWidget() {
     }
     document.title = 'اتجاه للتحليل الذكي';
     setHasUnread(false);
+    updateFaviconBadge(false);
     setToastAlert(null);
     window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: false } }));
   };
 
-  // Trigger all notification alerts (sound, push, title flasher, in-app toast)
+  // Trigger all notification alerts (sound, push, title flasher, favicon badge, in-app toast)
   const triggerNotifications = (msgText) => {
     playChimeSound();
     triggerBrowserNotification(msgText);
 
     setHasUnread(true);
+    updateFaviconBadge(true);
     setToastAlert(msgText);
     window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: true } }));
 
@@ -187,7 +233,7 @@ export default function WhatsAppWidget() {
     }
   }, [isOpen]);
 
-  // Click outside listener to close emoji picker or widget
+  // Click outside listener to close emoji picker or widget and return to home page
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -198,9 +244,13 @@ export default function WhatsAppWidget() {
       ) {
         setShowEmojiPicker(false);
       }
-      if (!isExpanded && widgetRef.current && !widgetRef.current.contains(event.target)) {
+      if (isOpen && widgetRef.current && !widgetRef.current.contains(event.target)) {
         setIsOpen(false);
-        setShowEmojiPicker(false);
+        setIsExpanded(false);
+        clearNotifications();
+        if (window.location.pathname !== '/') {
+          window.location.href = '/';
+        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -209,7 +259,7 @@ export default function WhatsAppWidget() {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [isExpanded]);
+  }, [isOpen, isExpanded]);
 
   // Restore assigned employee & chat session automatically on load
   useEffect(() => {
@@ -350,6 +400,9 @@ export default function WhatsAppWidget() {
       setIsOpen(false);
       setIsExpanded(false);
       clearNotifications();
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
     }
   };
 

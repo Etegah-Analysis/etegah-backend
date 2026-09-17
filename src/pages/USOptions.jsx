@@ -241,7 +241,7 @@ function USOptions() {
       </div>
 
       {/* ===== MARKET MOVERS SECTION ===== */}
-      <div className="glass card" style={{ padding: '24px', borderRadius: '16px', marginBottom: '30px' }}>
+      <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-6 sm:p-8 rounded-3xl mb-8">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'white' }}>📊 حركة السوق الأمريكي</h2>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -286,7 +286,7 @@ function USOptions() {
       </div>
 
 
-      <div className="glass card" style={{ padding: '30px', borderRadius: '16px', marginBottom: '30px' }} onClick={(e) => e.stopPropagation()}>
+      <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-6 sm:p-8 rounded-3xl mb-8" onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
           
           <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
@@ -307,15 +307,15 @@ function USOptions() {
                 style={{
                   flex: 1,
                   padding: '12px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-blue)',
-                  background: 'var(--dark-navy)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(6, 182, 212, 0.4)',
+                  background: '#0a0f1d',
                   color: 'white',
                   fontWeight: 'bold',
                   outline: 'none'
                 }}
               />
-              <button className="button primary" type="submit" style={{ padding: '12px 24px' }}>بحث</button>
+              <button className="flex items-center gap-2 font-bold cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white px-6 py-3 rounded-xl shadow-[0_8px_25px_rgba(16,185,129,0.35)] border border-emerald-300/40 transition-all text-xs sm:text-sm" type="submit">بحث</button>
             </div>
 
             {/* Premium Autocomplete Dropdown */}
@@ -325,9 +325,9 @@ function USOptions() {
                 top: '100%',
                 left: 0,
                 right: 0,
-                background: 'var(--dark-navy)',
-                border: '1px solid var(--border-blue)',
-                borderRadius: '8px',
+                background: '#0a0f1d',
+                border: '1px solid rgba(6, 182, 212, 0.4)',
+                borderRadius: '12px',
                 marginTop: '5px',
                 maxHeight: '200px',
                 overflowY: 'auto',
@@ -404,41 +404,21 @@ function USOptions() {
           </div>
 
           {ticker && expirationDates.length > 0 && (
-            <div style={{ flex: '1 1 100%' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: '#8b9eb3', fontWeight: '600' }}>تاريخ انتهاء العقد (Expiration)</label>
-              <div style={{ position: 'relative' }}>
+            <div className="w-full mt-4 bg-slate-950/80 backdrop-blur-2xl border border-cyan-500/40 rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.8)] border-t-2 border-t-cyan-400">
+              <label className="block text-xs sm:text-sm font-bold text-cyan-300 mb-2">تاريخ انتهاء العقد (Expiration)</label>
+              <div className="relative">
                 <select
                   value={selectedDate}
                   onChange={(e) => handleDateChange(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: '#1a2332',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: '1rem',
-                    appearance: 'none',
-                    cursor: 'pointer',
-                    outline: 'none',
-                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
-                  }}
+                  className="w-full bg-slate-900 border-2 border-cyan-500/40 rounded-xl px-4 py-3 text-white font-extrabold text-sm sm:text-base focus:outline-none focus:border-cyan-300 appearance-none cursor-pointer shadow-inner"
                 >
                   {expirationDates.map((date) => (
-                    <option key={date} value={date} style={{ background: '#0f172a', color: 'white', padding: '10px' }}>
+                    <option key={date} value={date} className="bg-slate-950 text-cyan-200 py-2">
                       {new Date(date).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}
                     </option>
                   ))}
                 </select>
-                <div style={{
-                  position: 'absolute',
-                  left: '16px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  pointerEvents: 'none',
-                  color: '#8b9eb3'
-                }}>
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-cyan-400 font-bold">
                   ▼
                 </div>
               </div>
