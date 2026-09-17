@@ -14,16 +14,14 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [otpAttempts, setOtpAttempts] = useState(0);
 
-  // Smart Phone Input Auto-detection
+  // Smart Phone Input Auto-detection (Saudi Arabia, UAE, USA)
   const handlePhoneInputChange = (val) => {
     let clean = val.replace(/[^0-9]/g, '');
     if (clean.startsWith('0')) {
       clean = clean.substring(1);
     }
 
-    if (clean.startsWith('1') && clean.length <= 10) {
-      setCountryCode('+20'); // Egypt
-    } else if (clean.startsWith('5') && clean.length <= 9) {
+    if (clean.startsWith('5') && clean.length <= 9) {
       if (countryCode !== '+971') {
         setCountryCode('+966'); // Saudi Arabia default
       }
@@ -260,10 +258,9 @@ export default function LandingPage() {
                     onChange={e => setCountryCode(e.target.value)}
                     className="bg-[#1E293B] text-white px-3 py-3 border-r border-white/10 focus:outline-none outline-none appearance-none font-bold"
                   >
-                    <option value="+966">SA +966</option>
-                    <option value="+20">EG +20</option>
-                    <option value="+971">AE +971</option>
-                    <option value="+1">US +1</option>
+                    <option value="+966">SA +966 🇸🇦</option>
+                    <option value="+971">AE +971 🇦🇪</option>
+                    <option value="+1">US +1 🇺🇸</option>
                   </select>
                   <input
                     type="tel"
@@ -272,7 +269,6 @@ export default function LandingPage() {
                     required
                     placeholder={
                       countryCode === '+966' ? "5XXXXXXXX" :
-                      countryCode === '+20' ? "1XXXXXXXX" :
                       countryCode === '+971' ? "5XXXXXXXX" : "XXXXXXXXXX"
                     }
                     className="w-full bg-transparent px-4 py-3 focus:outline-none text-white placeholder-gray-500 text-left font-bold"

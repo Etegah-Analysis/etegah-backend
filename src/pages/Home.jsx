@@ -8,12 +8,16 @@ import {
   Target, 
   Globe, 
   BarChart3,
-  ArrowRight
+  ArrowRight,
+  MessageCircle
 } from 'lucide-react';
 import logoImg from '../assets/logo.jpg';
 
-
 export default function Home({ onOpenRegister }) {
+
+  const handleOpenWhatsApp = () => {
+    window.dispatchEvent(new Event('open_whatsapp_widget'));
+  };
 
   return (
     <div className="home-page animate-fade-in">
@@ -39,24 +43,27 @@ export default function Home({ onOpenRegister }) {
             <p className="hero-subtitle">
               منصة "اتجاه" تدمج خبرة أسواق المال مع قوة الذكاء الاصطناعي لتوفر لك تحليلاً احترافياً لحظياً يساعدك على اقتناص الفرص وتجنب المخاطر.
             </p>
-            <div className="flex justify-center md:justify-end gap-4">
-              <Link to="/us-options" className="button hero-btn-outline">
-                استعرض الخدمات
-              </Link>
+            <div className="flex justify-center md:justify-end gap-4 mt-6">
+              <button 
+                onClick={handleOpenWhatsApp}
+                className="flex items-center gap-2 font-bold cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white px-7 py-3.5 rounded-2xl shadow-[0_10px_35px_rgba(16,185,129,0.4)] border border-emerald-300/40 transition-all transform hover:scale-105 active:scale-95 text-base"
+              >
+                <MessageCircle size={22} className="animate-bounce" />
+                <span>تواصل معنا عبر الواتساب</span>
+              </button>
             </div>
           </div>
           
-          <div className="hero-visual w-full md:w-1/2 mt-8 md:mt-0" style={{ position: 'relative' }}>
-            <div className="hero-logo-wrapper mx-auto" style={{ 
-              borderRadius: '30px', 
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <img src={logoImg} alt="Etegah Logo" style={{ width: '100%', maxWidth: '400px', display: 'block' }} />
+          <div className="hero-visual w-full md:w-1/2 mt-8 md:mt-0 relative flex justify-center items-center">
+            {/* 3D Glassmorphism Logo Container */}
+            <div className="relative p-6 sm:p-8 bg-slate-900/60 backdrop-blur-2xl border border-cyan-500/30 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] border-t-2 border-t-cyan-400 transform hover:scale-[1.02] transition-all duration-500 z-10">
+              <img src={logoImg} alt="Etegah Logo" className="w-full max-w-sm sm:max-w-md rounded-2xl object-cover shadow-2xl border border-white/10" />
             </div>
-            {/* Floating logo removed as requested */}
 
+            {/* 3D Glassmorphism Watermark Background */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-15 overflow-hidden z-0">
+              <img src={logoImg} alt="Watermark" className="w-96 h-96 rounded-full object-cover blur-[3px] scale-150 transform rotate-12" />
+            </div>
           </div>
         </div>
         
@@ -70,19 +77,19 @@ export default function Home({ onOpenRegister }) {
           <div className="flex flex-col md:flex-row gap-24 items-center">
             <div style={{ flex: 1, order: 2 }}>
               <div className="about-grid">
-                <div className="card glass about-card">
+                <div className="card glass about-card backdrop-blur-xl border border-white/10 shadow-2xl">
                   <ShieldCheck size={40} color="var(--primary-blue)" />
                   <h4>أمان تام</h4>
                 </div>
-                <div className="card glass about-card offset">
+                <div className="card glass about-card offset backdrop-blur-xl border border-white/10 shadow-2xl">
                   <Cpu size={40} color="var(--primary-blue)" />
                   <h4>ذكاء اصطناعي</h4>
                 </div>
-                <div className="card glass about-card">
+                <div className="card glass about-card backdrop-blur-xl border border-white/10 shadow-2xl">
                   <Zap size={40} color="var(--primary-blue)" />
                   <h4>سرعة لحظية</h4>
                 </div>
-                <div className="card glass about-card offset">
+                <div className="card glass about-card offset backdrop-blur-xl border border-white/10 shadow-2xl">
                   <Globe size={40} color="var(--primary-blue)" />
                   <h4>تغطية شاملة</h4>
                 </div>
@@ -116,7 +123,7 @@ export default function Home({ onOpenRegister }) {
         </div>
         
         <div className="value-grid">
-          <div className="card glass value-card">
+          <div className="card glass value-card backdrop-blur-xl border border-white/10 shadow-2xl">
             <div className="value-icon-box">
               <BarChart3 size={24} color="var(--primary-blue)" />
             </div>
@@ -124,7 +131,7 @@ export default function Home({ onOpenRegister }) {
             <p style={{ fontSize: '0.85rem' }}>رصد دقيق لاتجاهات السوق وتغيراتها قبل الجميع باستخدام خوارزميات تعلم الآلة.</p>
           </div>
           
-          <div className="card glass value-card">
+          <div className="card glass value-card backdrop-blur-xl border border-white/10 shadow-2xl">
             <div className="value-icon-box">
               <Target size={24} color="var(--primary-blue)" />
             </div>
@@ -132,7 +139,7 @@ export default function Home({ onOpenRegister }) {
             <p style={{ fontSize: '0.85rem' }}>تحديد مستويات الدعم والمقاومة الحرجة ونقاط الانعكاس المحتملة بدقة متناهية.</p>
           </div>
           
-          <div className="card glass value-card">
+          <div className="card glass value-card backdrop-blur-xl border border-white/10 shadow-2xl">
             <div className="value-icon-box">
               <ShieldCheck size={24} color="var(--primary-blue)" />
             </div>
@@ -144,61 +151,21 @@ export default function Home({ onOpenRegister }) {
 
       {/* CTA Section */}
       <section className="container mt-8 mb-16">
-        <div className="cta-box card glass">
+        <div className="cta-box card glass backdrop-blur-2xl border border-cyan-500/20 shadow-2xl">
           <h2 style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>ابدأ استثمارك بذكاء اليوم</h2>
           <p className="cta-text">
             انضم إلى مئات المتداولين الذين يستخدمون منصة اتجاه يومياً لتحسين أدائهم في السوق السعودي.
           </p>
+          <button 
+            onClick={handleOpenWhatsApp}
+            className="flex items-center gap-2 font-bold mx-auto cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white px-8 py-4 rounded-2xl shadow-[0_10px_35px_rgba(16,185,129,0.4)] border border-emerald-300/40 transition-all transform hover:scale-105 active:scale-95 text-lg"
+          >
+            <MessageCircle size={24} />
+            <span>تواصل معنا عبر الواتساب الآن</span>
+          </button>
         </div>
       </section>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        .home-page { animation: fadeIn 0.8s ease-out; }
-        .badge-modern {
-          display: inline-block; padding: 6px 14px; background: rgba(0, 188, 212, 0.1); 
-          borderRadius: 20px; border: 1px solid var(--primary-blue); color: var(--primary-blue);
-          font-size: 0.85rem; font-weight: bold; margin-bottom: 1.2rem;
-        }
-        .hero-title { font-size: 3.2rem; line-height: 1.2; margin-bottom: 1.2rem; font-weight: 800; }
-        .hero-subtitle { font-size: 1.15rem; color: var(--text-light); margin-bottom: 2rem; max-width: 600px; line-height: 1.7; }
-        .hero-btn { font-size: 1rem; padding: 12px 36px; border-radius: 12px; }
-        .hero-btn-outline { font-size: 1rem; padding: 12px 36px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
-        .hero-image-wrapper { 
-          border-radius: 30px; overflow: hidden; box-shadow: 0 20px 50px rgba(0, 188, 212, 0.2);
-          border: 1px solid rgba(255,255,255,0.1); transform: perspective(1000px) rotateY(-5deg);
-        }
-        .floating-card { position: absolute; padding: 15px 25px; border-radius: 15px; z-index: 10; }
-        .hero-glow { 
-          position: absolute; top: -10%; right: -5%; width: 500px; height: 500px; 
-          background: radial-gradient(circle, rgba(0, 188, 212, 0.1) 0%, transparent 70%); z-index: 1; 
-        }
-        .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .about-card { padding: 1.2rem; text-align: center; }
-        .about-card h4 { font-size: 0.85rem; margin-top: 8px; }
-        .about-card.offset { margin-top: 1.5rem; }
-        .about-text { font-size: 1rem; line-height: 1.7; color: var(--text-light); margin-bottom: 1.5rem; }
-        .about-list { list-style: none; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.85rem; }
-        .about-list li { display: flex; align-items: center; gap: 8px; }
-        .value-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
-        .value-card { padding: 1.5rem; text-align: center; }
-        .value-icon-box { background: var(--primary-blue-alpha); padding: 15px; border-radius: 50%; width: fit-content; margin: 0 auto 1.2rem; }
-        .cta-box { 
-          padding: 3rem; text-align: center; 
-          background: linear-gradient(135deg, var(--secondary-navy) 0%, var(--dark-navy) 100%) !important;
-          border: 1px solid var(--primary-blue) !important;
-        }
-        .cta-text { font-size: 1rem; color: var(--text-light); margin-bottom: 2rem; max-width: 600px; margin: 0 auto 2rem; }
-        .cta-btn { padding: 12px 40px; font-size: 1rem; }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        @media (max-width: 768px) {
-          .hero-title { font-size: 2.5rem !important; }
-          .hero-visual { display: none; }
-          .about-list { grid-template-columns: 1fr; }
-          .about-card.offset { margin-top: 0; }
-        }
-      `}} />
     </div>
   );
 }

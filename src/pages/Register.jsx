@@ -15,14 +15,11 @@ export default function Register({ lang }) {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // التعرف التلقائي الذكي على رمز الدولة لزوار المنصة الرئيسية
+  // التعرف التلقائي الذكي على رمز الدولة لزوار المنصة (السعودية، الإمارات، أمريكا)
   const handlePhoneInputChange = (val) => {
     let cleanVal = val.trim();
     
-    if (cleanVal.startsWith('+20') || cleanVal.startsWith('20')) {
-      setCountryCode('+20');
-      cleanVal = cleanVal.replace(/^\+?20/, '');
-    } else if (cleanVal.startsWith('+966') || cleanVal.startsWith('966')) {
+    if (cleanVal.startsWith('+966') || cleanVal.startsWith('966')) {
       setCountryCode('+966');
       cleanVal = cleanVal.replace(/^\+?966/, '');
     } else if (cleanVal.startsWith('+971') || cleanVal.startsWith('971')) {
@@ -31,10 +28,6 @@ export default function Register({ lang }) {
     } else if (cleanVal.startsWith('+1') && cleanVal.length > 5) {
       setCountryCode('+1');
       cleanVal = cleanVal.replace(/^\+?1/, '');
-    } else if (/^0?1[0125]/.test(cleanVal)) {
-      // مصر (010, 011, 012, 015)
-      setCountryCode('+20');
-      if (cleanVal.startsWith('0')) cleanVal = cleanVal.substring(1);
     } else if (/^0?5[0-9]/.test(cleanVal) && cleanVal.length <= 10) {
       // السعودية (05x)
       setCountryCode('+966');
@@ -257,7 +250,6 @@ export default function Register({ lang }) {
                   }}
                 >
                   <option value="+966">SA +966 🇸🇦</option>
-                  <option value="+20">EG +20 🇪🇬</option>
                   <option value="+971">AE +971 🇦🇪</option>
                   <option value="+1">US +1 🇺🇸</option>
                 </select>
@@ -268,7 +260,6 @@ export default function Register({ lang }) {
                   onChange={(e) => handlePhoneInputChange(e.target.value)}
                   placeholder={
                     countryCode === '+966' ? "5XXXXXXXX" : 
-                    countryCode === '+20' ? "1XXXXXXXX" : 
                     countryCode === '+971' ? "5XXXXXXXX" : "XXXXXXXXXX"
                   }
                   disabled={isLoading}
