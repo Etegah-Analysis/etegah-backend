@@ -107,54 +107,56 @@ export default function News() {
   }, []);
 
   return (
-    <div className="news-page container mt-8 mb-8">
+    <div className="news-page container my-8 relative z-10">
       {/* مؤشر تاسي */}
-      <div className="card glass" style={{ padding: 0, overflow: 'hidden', marginBottom: '2rem' }}>
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-blue)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <h3 style={{ margin: 0 }}>مؤشر التحليل الفني الشامل (السوق السعودي - تاسي)</h3>
-          <span style={{ fontSize: '0.72rem', padding: '3px 10px', background: 'rgba(38,166,154,0.15)', color: '#26a69a', borderRadius: '12px' }}>يومي</span>
+      <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 rounded-3xl overflow-hidden mb-8">
+        <div className="px-5 py-4 border-b border-cyan-500/30 flex items-center justify-between">
+          <h3 className="m-0 font-extrabold text-white text-base sm:text-lg flex items-center gap-2">
+            📊 مؤشر التحليل الفني الشامل (السوق السعودي - تاسي)
+          </h3>
+          <span className="text-[11px] font-bold px-3 py-1 bg-teal-500/20 text-teal-300 border border-teal-400/30 rounded-full">يومي</span>
         </div>
-        <div style={{ padding: '10px' }}>
+        <div className="p-3">
           <TechnicalAnalysisWidget />
         </div>
       </div>
 
       {/* رأس قسم الأخبار */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ margin: '0 0 1.5rem' }}>
+      <div className="mb-6">
+        <h2 className="text-xl sm:text-2xl font-black text-white m-0">
           أخبار الشركات المدرجة في السوق السعودي
         </h2>
       </div>
 
       {/* محتوى */}
       {loading ? (
-        <div style={{ padding: '5rem 0', textAlign: 'center', color: 'var(--text-light)' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+        <div className="py-16 text-center text-cyan-300 font-bold">
+          <div className="text-3xl mb-3 animate-pulse">⏳</div>
           جاري جلب أخبار اليوم...
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+        <div className="flex flex-col gap-3">
           {news.map(item => (
-            <div key={item.id} className="card glass" style={{ padding: 0, overflow: 'hidden' }}>
+            <div key={item.id} className="bg-gradient-to-r from-slate-900/80 via-indigo-950/80 to-slate-900/80 backdrop-blur-2xl border border-cyan-500/30 border-t-2 border-t-cyan-400/80 shadow-lg rounded-2xl overflow-hidden hover:border-cyan-400 hover:scale-[1.005] transition-all duration-300">
               <div
                 onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
-                style={{ padding: '15px 18px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}
+                className="p-4 sm:p-5 cursor-pointer flex justify-between items-start gap-3"
               >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--primary-blue)', marginBottom: '5px', fontWeight: 'bold' }}>
+                <div className="flex-1">
+                  <div className="text-xs text-cyan-400 mb-1.5 font-extrabold flex items-center gap-1">
                     🕐 {fmt(item.date)}
                   </div>
-                  <div style={{ fontWeight: 'bold', fontSize: '0.97rem', lineHeight: '1.5', color: 'var(--text-color)' }}>
+                  <div className="font-bold text-sm sm:text-base leading-relaxed text-white">
                     {item.title}
                   </div>
                 </div>
-                <div style={{ color: 'var(--text-light)', fontSize: '0.9rem', flexShrink: 0, paddingTop: '4px' }}>
+                <div className="text-cyan-400 font-bold text-sm shrink-0 pt-1">
                   {expandedId === item.id ? '▲' : '▼'}
                 </div>
               </div>
               {expandedId === item.id && item.body && (
-                <div style={{ padding: '0 18px 16px', borderTop: '1px solid var(--border-blue)' }}>
-                  <p style={{ margin: '14px 0 0', fontSize: '0.9rem', color: 'var(--text-color)', lineHeight: '1.85' }}>
+                <div className="px-5 pb-5 pt-1 border-t border-cyan-500/20 text-xs sm:text-sm text-gray-200 leading-relaxed">
+                  <p className="m-0">
                     {item.body.substring(0, 500)}{item.body.length > 500 ? '...' : ''}
                   </p>
                 </div>

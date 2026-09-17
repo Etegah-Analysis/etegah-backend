@@ -28,8 +28,8 @@ export default function Home({ onOpenRegister }) {
     <div className="home-page animate-fade-in relative z-10 py-6">
       
       {/* Hero Section */}
-      <section className="hero relative z-10 py-12 md:py-20 flex items-center">
-        <div className="container flex flex-col md:flex-row items-center gap-12 relative z-10">
+      <section className="hero relative z-10 py-8 md:py-12">
+        <div className="container bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_25px_70px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-8 sm:p-12 rounded-3xl flex flex-col md:flex-row items-center gap-12 relative z-10 overflow-hidden">
           <div className="hero-content w-full md:w-1/2 text-center md:text-right flex-1">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-xs font-bold mb-6 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
               <SparklesIcon /> مستقبل التداول الذكي في السوق السعودي والخليجي

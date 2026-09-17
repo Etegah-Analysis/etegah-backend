@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageCircle, X, Send, Headphones, ShieldCheck, Sparkles, 
   Paperclip, Image as ImageIcon, Smile, Maximize2, Minimize2, 
-  Reply, User, Phone, FileText, Download, CheckCheck, ArrowRight
+  Reply, User, Phone, PhoneCall, FileText, Download, CheckCheck, ArrowRight
 } from 'lucide-react';
-import { db, collection, query, where, getDocs, doc, setDoc, onSnapshot, serverTimestamp, addDoc } from '../firebase';
+import { db, collection, query, where, getDocs, getDoc, doc, setDoc, onSnapshot, serverTimestamp, addDoc } from '../firebase';
 
 export default function WhatsAppWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,6 +48,148 @@ export default function WhatsAppWidget() {
     '⚡', '🎯', '📊', '📱', '🚀', '💬', '📌', '✨', 
     '🛑', '✅', '❌', '💡', '🏆', '📈', '📉'
   ];
+
+  const ringingIntervalRef = useRef(null);
+  const [activeInternalCall, setActiveInternalCall] = useState(null);
+
+  // Play repeating telephone ringing chime
+  const startRingingBellSound = () => {
+    stopRingingBellSound();
+    const ring = () => {
+      try {
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const ctx = audioCtxRef.current;
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        osc1.frequency.setValueAtTime(440, ctx.currentTime);
+        osc2.frequency.setValueAtTime(480, ctx.currentTime);
+
+        gain.gain.setValueAtTime(0.35, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.2);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc1.start();
+        osc2.start();
+        osc1.stop(ctx.currentTime + 1.2);
+        osc2.stop(ctx.currentTime + 1.2);
+      } catch (e) {}
+    };
+    ring();
+    ringingIntervalRef.current = setInterval(ring, 2500);
+  };
+
+  const stopRingingBellSound = () => {
+    if (ringingIntervalRef.current) {
+      clearInterval(ringingIntervalRef.current);
+      ringingIntervalRef.current = null;
+    }
+  };
+
+  // Listen for internal call rings in real-time
+  useEffect(() => {
+    if (!userPhone) return;
+    const cleanPhone = userPhone.replace(/[^0-9]/g, '');
+    const callDocRef = doc(db, 'internal_calls', cleanPhone);
+
+    const unsub = onSnapshot(callDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.status === 'ringing' && data.callerType === 'staff') {
+          setActiveInternalCall(data);
+          startRingingBellSound();
+          triggerBrowserNotification(`📞 اتصال داخلي جاري من ${data.empName || 'الموظف'}...`);
+        } else {
+          setActiveInternalCall(null);
+          stopRingingBellSound();
+        }
+      } else {
+        setActiveInternalCall(null);
+        stopRingingBellSound();
+      }
+    }, (err) => console.error("Internal call listener error:", err));
+
+    return () => {
+      unsub();
+      stopRingingBellSound();
+    };
+  }, [userPhone]);
+
+  // Trigger internal call from client to staff
+  const handleTriggerInternalCall = async () => {
+    if (!userPhone) return;
+    const cleanPhone = userPhone.replace(/[^0-9]/g, '');
+    const callDocRef = doc(db, 'internal_calls', cleanPhone);
+
+    try {
+      await setDoc(callDocRef, {
+        id: cleanPhone,
+        userPhone: userPhone,
+        cleanPhone: cleanPhone,
+        clientName: userName || 'عميل اتجاه',
+        callerType: 'client',
+        status: 'ringing',
+        empCode: assignedEmp?.empCode || 'CS',
+        empName: assignedEmp?.name || 'خدمة العملاء',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      await addDoc(collection(db, 'رسائل_الموظفين_للعملاء'), {
+        conversationId: cleanPhone,
+        phoneNumber: userPhone,
+        sender: 'client',
+        text: "📞 طلب اتصال داخلي من العميل (تنبيه انتباه ⚡)",
+        timestamp: serverTimestamp()
+      });
+
+      startRingingBellSound();
+      alert(`جاري الاتصال والتنبيه للموظف (${assignedEmp?.name || 'خدمة العملاء'})... 📞🔔`);
+
+      setTimeout(async () => {
+        try {
+          const snap = await getDoc(callDocRef);
+          if (snap.exists() && snap.data().status === 'ringing') {
+            await setDoc(callDocRef, { status: 'cancelled' }, { merge: true });
+          }
+        } catch (e) {}
+      }, 30000);
+
+    } catch (err) {
+      console.error("Call trigger error:", err);
+    }
+  };
+
+  const handleCancelCall = async () => {
+    stopRingingBellSound();
+    setActiveInternalCall(null);
+    if (!userPhone) return;
+    const cleanPhone = userPhone.replace(/[^0-9]/g, '');
+    try {
+      await setDoc(doc(db, 'internal_calls', cleanPhone), { status: 'cancelled' }, { merge: true });
+    } catch (e) {}
+  };
+
+  const handleAnswerCall = async () => {
+    stopRingingBellSound();
+    setActiveInternalCall(null);
+    setIsOpen(true);
+    clearNotifications();
+    if (!userPhone) return;
+    const cleanPhone = userPhone.replace(/[^0-9]/g, '');
+    try {
+      await setDoc(doc(db, 'internal_calls', cleanPhone), { status: 'answered' }, { merge: true });
+    } catch (e) {}
+  };
 
   // Global user interaction listener to unlock AudioContext for sound alerts
   useEffect(() => {
@@ -638,6 +780,37 @@ export default function WhatsAppWidget() {
 
   return (
     <>
+      {/* Floating Ringing Call Banner / Modal */}
+      {activeInternalCall && activeInternalCall.status === 'ringing' && (
+        <div className="fixed top-6 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-[9999] bg-gradient-to-r from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-2xl border-2 border-cyan-400 text-white p-4.5 rounded-3xl shadow-[0_20px_60px_rgba(6,182,212,0.6)] animate-bounce font-sans border-t-2 border-t-cyan-300" dir="rtl">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 animate-ping shrink-0">
+              <PhoneCall size={24} />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-extrabold text-xs sm:text-sm text-cyan-300">
+                📞 اتصال داخلي جاري من {activeInternalCall.empName || 'الموظف'}!
+              </h4>
+              <p className="text-[11px] text-gray-200 mt-0.5">ويرغب في تنبيهك والتواصل الفوري معك في الشات.</p>
+            </div>
+          </div>
+          <div className="mt-3.5 flex gap-2">
+            <button
+              onClick={handleAnswerCall}
+              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold py-2 px-3 rounded-xl text-xs shadow-md cursor-pointer transition active:scale-95"
+            >
+              فتح المحادثة والرد 💬
+            </button>
+            <button
+              onClick={handleCancelCall}
+              className="bg-rose-950/80 hover:bg-rose-900/90 border border-rose-500/40 text-rose-300 font-bold py-2 px-3 rounded-xl text-xs cursor-pointer transition"
+            >
+              إلغاء / كنسل
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* In-App Floating Toast Alert Banner */}
       {toastAlert && !isOpen && (
         <div 
@@ -734,17 +907,23 @@ export default function WhatsAppWidget() {
               </div>
             </div>
 
-            {/* User Status Bar with Client Name & Phone */}
+            {/* User Status Bar with Client Name & Interactive Phone Call Button */}
             <div className="bg-cyan-950/40 px-4 py-2 border-b border-cyan-500/20 flex items-center justify-between text-[11px] shrink-0">
               <div className="flex items-center gap-1.5 truncate max-w-[55%]">
                 <User size={13} className="text-cyan-400 shrink-0" />
                 <span className="font-bold text-cyan-200 truncate">{userName || 'عميل اتجاه'}</span>
               </div>
-              <div className="flex items-center gap-1 font-mono text-cyan-300 text-[10px]" dir="ltr">
-                <Phone size={12} className="text-cyan-400 shrink-0" />
+              <button
+                type="button"
+                onClick={handleTriggerInternalCall}
+                className="flex items-center gap-1.5 font-mono text-cyan-300 text-[10px] bg-cyan-900/60 hover:bg-cyan-800/80 p-1 px-2.5 rounded-xl border border-cyan-400/40 shadow-md transition cursor-pointer active:scale-95"
+                title="إجراء اتصال داخلي وتنبيه الموظف 📞"
+                dir="ltr"
+              >
+                <PhoneCall size={13} className="text-cyan-400 animate-pulse shrink-0" />
                 <span>{userPhone}</span>
-                <ShieldCheck size={13} className="text-emerald-400 ml-1 shrink-0" title="حساب موثق بالـ OTP" />
-              </div>
+                <ShieldCheck size={13} className="text-emerald-400 ml-0.5 shrink-0" title="حساب موثق بالـ OTP" />
+              </button>
             </div>
 
             {/* Step 1: Code Input / Selection */}

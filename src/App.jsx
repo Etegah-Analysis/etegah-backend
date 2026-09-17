@@ -14,6 +14,7 @@ import News from './pages/News';
 import Navbar from './components/Navbar';
 
 import WhatsAppWidget from './components/WhatsAppWidget';
+import InstallPWA from './components/InstallPWA';
 
 // A layout wrapper for public pages with 3D Glassmorphism theme
 function PublicLayout({ children }) {
@@ -35,6 +36,7 @@ function PublicLayout({ children }) {
         <Navbar />
         {children}
         <WhatsAppWidget />
+        <InstallPWA />
       </div>
     </div>
   );
