@@ -68,51 +68,62 @@ export default function Home({ onOpenRegister }) {
           <div className="flex flex-col md:flex-row gap-12 items-center">
             <div className="w-full md:w-1/2 order-2 md:order-1">
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-900/60 backdrop-blur-xl border border-cyan-500/30 p-6 rounded-2xl shadow-xl hover:border-cyan-400/60 transition duration-300">
-                  <ShieldCheck size={36} className="text-cyan-400 mb-3" />
-                  <h4 className="font-bold text-white text-base">أمان تام</h4>
-                  <p className="text-xs text-gray-400 mt-1">حماية تامة للبيانات والتحليلات</p>
+                <div className="bg-gradient-to-r from-slate-900/80 via-indigo-950/80 to-slate-900/80 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_15px_45px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-6 rounded-3xl hover:scale-105 transition-all duration-300 flex flex-col justify-between group">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-400/50 flex items-center justify-center mb-3 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                    <ShieldCheck size={26} />
+                  </div>
+                  <h4 className="font-extrabold text-white text-base mb-1">أمان تام</h4>
+                  <p className="text-xs text-gray-300 leading-relaxed">حماية تامة للبيانات والتحليلات</p>
                 </div>
-                <div className="bg-slate-900/60 backdrop-blur-xl border border-cyan-500/30 p-6 rounded-2xl shadow-xl hover:border-cyan-400/60 transition duration-300">
-                  <Cpu size={36} className="text-cyan-400 mb-3" />
-                  <h4 className="font-bold text-white text-base">ذكاء اصطناعي</h4>
-                  <p className="text-xs text-gray-400 mt-1">خوارزميات رصد الاتجاهات</p>
+
+                <div className="bg-gradient-to-r from-slate-900/80 via-indigo-950/80 to-slate-900/80 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_15px_45px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-6 rounded-3xl hover:scale-105 transition-all duration-300 flex flex-col justify-between group">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-400/50 flex items-center justify-center mb-3 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                    <Cpu size={26} />
+                  </div>
+                  <h4 className="font-extrabold text-white text-base mb-1">ذكاء اصطناعي</h4>
+                  <p className="text-xs text-gray-300 leading-relaxed">خوارزميات رصد الاتجاهات</p>
                 </div>
-                <div className="bg-slate-900/60 backdrop-blur-xl border border-cyan-500/30 p-6 rounded-2xl shadow-xl hover:border-cyan-400/60 transition duration-300">
-                  <Zap size={36} className="text-cyan-400 mb-3" />
-                  <h4 className="font-bold text-white text-base">سرعة لحظية</h4>
-                  <p className="text-xs text-gray-400 mt-1">تحديثات أسعار مباشرة</p>
+
+                <div className="bg-gradient-to-r from-slate-900/80 via-indigo-950/80 to-slate-900/80 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_15px_45px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-6 rounded-3xl hover:scale-105 transition-all duration-300 flex flex-col justify-between group">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-400/50 flex items-center justify-center mb-3 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                    <Zap size={26} />
+                  </div>
+                  <h4 className="font-extrabold text-white text-base mb-1">سرعة لحظية</h4>
+                  <p className="text-xs text-gray-300 leading-relaxed">تحديثات أسعار مباشرة</p>
                 </div>
-                <div className="bg-slate-900/60 backdrop-blur-xl border border-cyan-500/30 p-6 rounded-2xl shadow-xl hover:border-cyan-400/60 transition duration-300">
-                  <Globe size={36} className="text-cyan-400 mb-3" />
-                  <h4 className="font-bold text-white text-base">تغطية شاملة</h4>
-                  <p className="text-xs text-gray-400 mt-1">السوق السعودي والأمريكي</p>
+
+                <div className="bg-gradient-to-r from-slate-900/80 via-indigo-950/80 to-slate-900/80 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_15px_45px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-6 rounded-3xl hover:scale-105 transition-all duration-300 flex flex-col justify-between group">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-cyan-500/20 to-blue-600/20 border border-cyan-400/50 flex items-center justify-center mb-3 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.4)]">
+                    <Globe size={26} />
+                  </div>
+                  <h4 className="font-extrabold text-white text-base mb-1">تغطية شاملة</h4>
+                  <p className="text-xs text-gray-300 leading-relaxed">السوق السعودي والأمريكي</p>
                 </div>
               </div>
             </div>
             
             <div className="w-full md:w-1/2 order-1 md:order-2">
               <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">ما هي منصة اتجاه؟</h2>
-              <p className="text-gray-300 text-sm leading-relaxed mb-4">
+              <p className="text-gray-300 text-sm sm:text-base leading-relaxed mb-4">
                 منصة "اتجاه" هي شريكك الرقمي في عالم التداول، نجمع بين عراقة التحليل المالي وأحدث ابتكارات الذكاء الاصطناعي (AI) لتمكين المتداول من قراءة السوق برؤية أعمق، بعيداً عن العشوائية.
               </p>
-              <p className="text-gray-300 text-sm leading-relaxed mb-6">
+              <p className="text-gray-300 text-sm sm:text-base leading-relaxed mb-6">
                 نحن نقدم أدوات تحليل لحظية، رصد للسيولة، وتحديد دقيق لمناطق العرض والطلب لتجعل قرارك الاستثماري مبنياً على البيانات لا العاطفة.
               </p>
-              <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-cyan-200">
-                <div className="flex items-center gap-2 bg-slate-900/40 p-2.5 rounded-xl border border-cyan-500/20">
+              <div className="grid grid-cols-2 gap-3 text-xs sm:text-sm font-bold text-cyan-200">
+                <div className="flex items-center gap-2.5 bg-gradient-to-r from-slate-900/80 via-indigo-950/80 to-slate-900/80 backdrop-blur-2xl p-3.5 rounded-2xl border border-cyan-500/40 border-t-2 border-t-cyan-400/80 shadow-lg hover:scale-[1.02] transition">
                   <ArrowRight size={16} className="text-cyan-400 shrink-0" />
                   <span>دعم فني متواصل 24/7</span>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-900/40 p-2.5 rounded-xl border border-cyan-500/20">
+                <div className="flex items-center gap-2.5 bg-gradient-to-r from-slate-900/80 via-indigo-950/80 to-slate-900/80 backdrop-blur-2xl p-3.5 rounded-2xl border border-cyan-500/40 border-t-2 border-t-cyan-400/80 shadow-lg hover:scale-[1.02] transition">
                   <ArrowRight size={16} className="text-cyan-400 shrink-0" />
                   <span>تقارير يومية ذكية</span>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-900/40 p-2.5 rounded-xl border border-cyan-500/20">
+                <div className="flex items-center gap-2.5 bg-gradient-to-r from-slate-900/80 via-indigo-950/80 to-slate-900/80 backdrop-blur-2xl p-3.5 rounded-2xl border border-cyan-500/40 border-t-2 border-t-cyan-400/80 shadow-lg hover:scale-[1.02] transition">
                   <ArrowRight size={16} className="text-cyan-400 shrink-0" />
                   <span>تحليل 200+ شركة</span>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-900/40 p-2.5 rounded-xl border border-cyan-500/20">
+                <div className="flex items-center gap-2.5 bg-gradient-to-r from-slate-900/80 via-indigo-950/80 to-slate-900/80 backdrop-blur-2xl p-3.5 rounded-2xl border border-cyan-500/40 border-t-2 border-t-cyan-400/80 shadow-lg hover:scale-[1.02] transition">
                   <ArrowRight size={16} className="text-cyan-400 shrink-0" />
                   <span>تحديثات لحظية دقيقة</span>
                 </div>

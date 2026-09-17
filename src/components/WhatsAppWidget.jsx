@@ -233,7 +233,7 @@ export default function WhatsAppWidget() {
     }
   }, [isOpen]);
 
-  // Click outside listener to close emoji picker or widget and return to home page
+  // Click outside listener to close emoji picker or widget modal
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -248,9 +248,6 @@ export default function WhatsAppWidget() {
         setIsOpen(false);
         setIsExpanded(false);
         clearNotifications();
-        if (window.location.pathname !== '/') {
-          window.location.href = '/';
-        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
