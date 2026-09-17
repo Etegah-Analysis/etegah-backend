@@ -170,31 +170,40 @@ export default function WhatsAppWidget() {
   useEffect(() => {
     if (!userPhone) return;
     const cleanPhone = userPhone.replace(/[^0-9]/g, '');
+    const possibleIds = Array.from(new Set([cleanPhone, userPhone, `+${cleanPhone}`, `chat_${cleanPhone}`]));
 
-    const qMsgs = query(
+    const q1 = query(
       collection(db, 'رسائل_الموظفين_للعملاء'),
-      where('conversationId', '==', cleanPhone)
+      where('conversationId', 'in', possibleIds)
     );
 
-    const unsub = onSnapshot(qMsgs, (snap) => {
-      const msgList = [];
-      snap.forEach((docSnap) => {
-        const data = docSnap.data();
-        let tsMs = Date.now();
-        if (data.timestamp?.toDate) {
-          tsMs = data.timestamp.toDate().getTime();
-        } else if (data.timestamp) {
-          tsMs = new Date(data.timestamp).getTime();
-        }
+    const q2 = query(
+      collection(db, 'رسائل_الموظفين_للعملاء'),
+      where('phoneNumber', 'in', possibleIds)
+    );
 
-        msgList.push({
-          id: docSnap.id,
-          ...data,
-          tsMs
+    const processSnapshots = (snaps) => {
+      const msgMap = new Map();
+      snaps.forEach((snap) => {
+        if (!snap) return;
+        snap.forEach((docSnap) => {
+          const data = docSnap.data();
+          let tsMs = Date.now();
+          if (data.timestamp?.toDate) {
+            tsMs = data.timestamp.toDate().getTime();
+          } else if (data.timestamp) {
+            tsMs = new Date(data.timestamp).getTime();
+          }
+
+          msgMap.set(docSnap.id, {
+            id: docSnap.id,
+            ...data,
+            tsMs
+          });
         });
       });
 
-      // Sort chronologically
+      const msgList = Array.from(msgMap.values());
       msgList.sort((a, b) => a.tsMs - b.tsMs);
 
       setMessages(msgList);
@@ -202,19 +211,37 @@ export default function WhatsAppWidget() {
       // Play sound notification & browser push for staff responses
       if (msgList.length > prevMsgCountRef.current) {
         const lastMsg = msgList[msgList.length - 1];
-        if (lastMsg && (lastMsg.sender === 'staff' || lastMsg.sender === 'employee' || lastMsg.sender === 'admin')) {
+        if (lastMsg && (lastMsg.sender === 'staff' || lastMsg.sender === 'employee' || lastMsg.sender === 'admin' || lastMsg.sender === 'agent')) {
           playChimeSound();
-          triggerBrowserNotification(lastMsg.text);
+          triggerBrowserNotification(lastMsg.text || 'رسالة جديدة من خدمة العملاء');
+          
           if (!isOpen) {
             setHasUnread(true);
+            document.title = '(1) رسالة جديدة 💬 - اتجاه للتحليل الذكي';
             window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: true } }));
           }
         }
       }
       prevMsgCountRef.current = msgList.length;
-    }, (err) => console.error("Firestore messages subscription error:", err));
+    };
 
-    return () => unsub();
+    let s1 = null;
+    let s2 = null;
+
+    const unsub1 = onSnapshot(q1, (snap) => {
+      s1 = snap;
+      processSnapshots([s1, s2]);
+    }, (err) => console.error("q1 error:", err));
+
+    const unsub2 = onSnapshot(q2, (snap) => {
+      s2 = snap;
+      processSnapshots([s1, s2]);
+    }, (err) => console.error("q2 error:", err));
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
   }, [userPhone, isOpen]);
 
   // Auto scroll to latest message
@@ -576,7 +603,7 @@ export default function WhatsAppWidget() {
 
               <form onSubmit={handleVerifyEmpCode} className="space-y-2.5">
                 <label className="block text-[11px] font-bold text-cyan-200">
-                  المتابعة مع موظف محدد (مثال: #206 أو 206):
+                  المتابعة مع موظف محدد (احصل على الكود من الموظف):
                 </label>
                 <div className="flex gap-2">
                   <input

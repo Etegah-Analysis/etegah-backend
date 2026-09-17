@@ -77,7 +77,7 @@ export default function Navbar() {
             أخبار السوق السعودي
           </Link>
           <Link to="/us-options" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
-            رادار الأوبشن
+            أخبار السوق الأمريكي
           </Link>
 
           <div className="user-section-mobile">
