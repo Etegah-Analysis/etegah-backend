@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageCircle, X, Send, Headphones, ShieldCheck, Sparkles, 
   Paperclip, Image as ImageIcon, Smile, Maximize2, Minimize2, 
-  Reply, User, Phone, FileText, Download, CheckCheck
+  Reply, User, Phone, FileText, Download, CheckCheck, ArrowRight
 } from 'lucide-react';
 import { db, collection, query, where, getDocs, doc, setDoc, onSnapshot, serverTimestamp, addDoc } from '../firebase';
 
@@ -30,15 +30,41 @@ export default function WhatsAppWidget() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const widgetRef = useRef(null);
+  const emojiPickerRef = useRef(null);
+  const emojiBtnRef = useRef(null);
+  const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const prevMsgCountRef = useRef(0);
 
+  // Popular Emojis without SA text string
   const popularEmojis = [
     '😀', '😂', '😍', '😎', '👍', '👎', '❤️', '🔥', 
     '⚡', '🎯', '📊', '📱', '🚀', '💬', '📌', '✨', 
-    '🛑', '✅', '❌', '💡', '🏆', '📈', '📉', '🇸🇦'
+    '🛑', '✅', '❌', '💡', '🏆', '📈', '📉'
   ];
+
+  // Request Browser Push Notification permission on load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+
+  // Listen for custom trigger to open WhatsApp widget from anywhere in app
+  useEffect(() => {
+    const handleOpenWidget = () => {
+      const phone = localStorage.getItem('visitorPhone') || '';
+      if (!phone) {
+        alert('يرجى تسجيل الدخول أولاً بالـ OTP لتأكيد حسابك وبدء التواصل المباشر 🔐');
+        window.location.href = '/login';
+        return;
+      }
+      setIsOpen(true);
+    };
+    window.addEventListener('open_whatsapp_widget', handleOpenWidget);
+    return () => window.removeEventListener('open_whatsapp_widget', handleOpenWidget);
+  }, []);
 
   // Synthesize pleasant notification chime sound using Web Audio API
   const playChimeSound = () => {
@@ -56,8 +82,21 @@ export default function WhatsAppWidget() {
       osc.start();
       osc.stop(ctx.currentTime + 0.35);
     } catch (e) {
-      // Ignore audio autoplay restrictions gracefully
+      // Ignore audio autoplay restrictions
     }
+  };
+
+  // Trigger Browser Desktop Push Notification
+  const triggerBrowserNotification = (msgText) => {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('منصة اتجاه التحليل الذكي 💬', {
+          body: msgText || 'رسالة جديدة من الدعم الفني',
+          icon: '/logo.jpg',
+          tag: 'whatsapp_msg'
+        });
+      }
+    } catch (e) {}
   };
 
   // Check login authentication state from localStorage & Firestore
@@ -67,10 +106,8 @@ export default function WhatsAppWidget() {
     setUserPhone(phone);
     setUserName(name);
 
-    // Also sync client name from Firestore بيانات_تسجيل_العملاء if stored
     if (phone) {
       const cleanPhone = phone.replace(/[^0-9]/g, '');
-      const docRef = doc(db, 'بيانات_تسجيل_العملاء', cleanPhone);
       getDocs(query(collection(db, 'بيانات_تسجيل_العملاء'), where('phoneNumber', '==', phone)))
         .then((snap) => {
           if (!snap.empty) {
@@ -82,9 +119,17 @@ export default function WhatsAppWidget() {
     }
   }, [isOpen]);
 
-  // Click outside listener (only when not expanded)
+  // Click outside listener to close emoji picker or widget
   useEffect(() => {
     const handleClickOutside = (event) => {
+      if (
+        emojiPickerRef.current && 
+        !emojiPickerRef.current.contains(event.target) &&
+        emojiBtnRef.current &&
+        !emojiBtnRef.current.contains(event.target)
+      ) {
+        setShowEmojiPicker(false);
+      }
       if (!isExpanded && widgetRef.current && !widgetRef.current.contains(event.target)) {
         setIsOpen(false);
         setShowEmojiPicker(false);
@@ -154,12 +199,16 @@ export default function WhatsAppWidget() {
 
       setMessages(msgList);
 
-      // Play sound notification for staff responses
+      // Play sound notification & browser push for staff responses
       if (msgList.length > prevMsgCountRef.current) {
         const lastMsg = msgList[msgList.length - 1];
         if (lastMsg && (lastMsg.sender === 'staff' || lastMsg.sender === 'employee' || lastMsg.sender === 'admin')) {
           playChimeSound();
-          if (!isOpen) setHasUnread(true);
+          triggerBrowserNotification(lastMsg.text);
+          if (!isOpen) {
+            setHasUnread(true);
+            window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: true } }));
+          }
         }
       }
       prevMsgCountRef.current = msgList.length;
@@ -173,6 +222,7 @@ export default function WhatsAppWidget() {
     if (isOpen && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
       setHasUnread(false);
+      window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: false } }));
     }
   }, [messages, isOpen]);
 
@@ -185,6 +235,17 @@ export default function WhatsAppWidget() {
     }
     setIsOpen(!isOpen);
     setHasUnread(false);
+    window.dispatchEvent(new CustomEvent('etegah_unread_msg', { detail: { hasUnread: false } }));
+  };
+
+  // Back Button Navigation inside Widget
+  const handleBackButtonClick = () => {
+    if (widgetStep === 'chat_room') {
+      setWidgetStep('code_input');
+    } else {
+      setIsOpen(false);
+      setIsExpanded(false);
+    }
   };
 
   // Verify Employee Code
@@ -329,17 +390,28 @@ export default function WhatsAppWidget() {
     reader.readAsDataURL(file);
   };
 
+  // Select Emoji from picker
+  const handleEmojiSelect = (emoji) => {
+    setInputText((prev) => prev + emoji);
+    setShowEmojiPicker(false);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
+  };
+
   // Send message handler
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
-    if ((!inputText.trim() && !pendingMedia) || !userPhone) return;
-
-    const cleanPhone = userPhone.replace(/[^0-9]/g, '');
-    const textToSend = inputText.trim();
+    const textToSend = inputText;
     const mediaToSend = pendingMedia;
     const replyToSend = replyToMessage;
 
-    // Reset local input states immediately for fast UX
+    if ((!textToSend || !textToSend.trim()) && !mediaToSend) return;
+    if (!userPhone) return;
+
+    const cleanPhone = userPhone.replace(/[^0-9]/g, '');
+
+    // Reset local input states immediately
     setInputText('');
     setPendingMedia(null);
     setReplyToMessage(null);
@@ -349,7 +421,7 @@ export default function WhatsAppWidget() {
       conversationId: cleanPhone,
       phoneNumber: userPhone,
       sender: 'client',
-      text: textToSend,
+      text: textToSend.trim(),
       mediaUrl: mediaToSend?.url || null,
       mediaType: mediaToSend?.type || null,
       mediaName: mediaToSend?.name || null,
@@ -358,10 +430,8 @@ export default function WhatsAppWidget() {
     };
 
     try {
-      // 1. Add message doc directly to رسائل_الموظفين_للعملاء
       await addDoc(collection(db, 'رسائل_الموظفين_للعملاء'), newMsgDoc);
 
-      // 2. Update website_chats metadata
       const chatId = `chat_${cleanPhone}`;
       const chatDocRef = doc(db, 'website_chats', chatId);
       await setDoc(chatDocRef, {
@@ -370,13 +440,12 @@ export default function WhatsAppWidget() {
         cleanPhone: cleanPhone,
         name: userName || 'عميل اتجاه',
         source: 'website_whatsapp',
-        lastMsgText: textToSend || (mediaToSend ? '📎 مرفق' : ''),
+        lastMsgText: textToSend.trim() || (mediaToSend ? '📎 مرفق' : ''),
         lastMsgTime: new Date().toISOString(),
         updatedAt: serverTimestamp(),
         unreadCountStaff: (messages.length || 0) + 1
       }, { merge: true });
 
-      // 3. Sync to بيانات_تسجيل_العملاء & customers
       const regCustomerDocRef = doc(db, 'بيانات_تسجيل_العملاء', cleanPhone);
       const customerDocRef = doc(db, 'customers', cleanPhone);
 
@@ -386,7 +455,7 @@ export default function WhatsAppWidget() {
         source: 'website_whatsapp',
         addedBy: 'WhatsApp Webhook',
         unread: 1,
-        lastMessage: textToSend || (mediaToSend ? '📎 مرفق' : ''),
+        lastMessage: textToSend.trim() || (mediaToSend ? '📎 مرفق' : ''),
         timestamp: serverTimestamp()
       }, { merge: true });
 
@@ -395,7 +464,7 @@ export default function WhatsAppWidget() {
         name: userName || 'عميل اتجاه',
         source: 'website_whatsapp',
         addedBy: 'WhatsApp Webhook',
-        lastComment: textToSend || (mediaToSend ? '📎 مرفق' : ''),
+        lastComment: textToSend.trim() || (mediaToSend ? '📎 مرفق' : ''),
         updatedAt: serverTimestamp()
       }, { merge: true });
 
@@ -404,12 +473,20 @@ export default function WhatsAppWidget() {
     }
   };
 
+  // Keyboard Enter key handler
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e);
+    }
+  };
+
   return (
     <div 
       ref={widgetRef} 
       className={`fixed ${
         isExpanded 
-          ? 'inset-0 sm:inset-4 z-50 p-0 sm:p-2' 
+          ? 'inset-0 z-[9999] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-2 sm:p-6' 
           : 'bottom-4 left-4 sm:bottom-6 sm:left-6 z-50'
       } font-sans transition-all duration-300`} 
       dir="rtl"
@@ -427,9 +504,9 @@ export default function WhatsAppWidget() {
       {isOpen && (
         <div className={`${
           isExpanded 
-            ? 'w-full h-full rounded-none sm:rounded-3xl' 
+            ? 'w-full max-w-4xl h-[92vh] rounded-3xl' 
             : 'mb-3 w-[calc(100vw-32px)] max-w-88 sm:max-w-96 rounded-3xl h-[520px]'
-        } bg-slate-950/95 backdrop-blur-2xl border border-cyan-500/30 text-white shadow-[0_12px_60px_rgba(0,0,0,0.85)] flex flex-col relative overflow-hidden animate-fade-in border-t-2 border-t-cyan-400`}>
+        } bg-slate-950/95 backdrop-blur-2xl border border-cyan-500/30 text-white shadow-[0_20px_80px_rgba(0,0,0,0.9)] flex flex-col relative overflow-hidden animate-fade-in border-t-2 border-t-cyan-400`}>
           
           {/* Header */}
           <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-4 py-3 border-b border-white/10 flex items-center justify-between shrink-0">
@@ -449,6 +526,15 @@ export default function WhatsAppWidget() {
             </div>
             
             <div className="flex items-center gap-1">
+              {/* Back Arrow Button */}
+              <button
+                onClick={handleBackButtonClick}
+                className="text-gray-400 hover:text-cyan-300 transition p-1.5 rounded-full hover:bg-white/10 cursor-pointer"
+                title="رجوع للخلف"
+              >
+                <ArrowRight size={18} />
+              </button>
+
               {/* Expand / Fullscreen Toggle Button */}
               <button 
                 onClick={() => setIsExpanded(!isExpanded)} 
@@ -542,7 +628,10 @@ export default function WhatsAppWidget() {
               </div>
 
               {/* Message List */}
-              <div className="flex-1 p-3.5 space-y-3 overflow-y-auto custom-scrollbar relative z-10">
+              <div 
+                onClick={() => setShowEmojiPicker(false)}
+                className="flex-1 p-3.5 space-y-3 overflow-y-auto custom-scrollbar relative z-10"
+              >
                 {messages.length === 0 ? (
                   <div className="text-center py-12 text-gray-400 text-xs">
                     <p className="mb-2">👋 مرحباً بك! أرسل استفسارك وسيجيبك الموظف فوراً.</p>
@@ -555,7 +644,7 @@ export default function WhatsAppWidget() {
                     const isClient = msg.sender === 'client';
                     return (
                       <div key={msg.id || idx} className={`group flex flex-col ${isClient ? 'items-end' : 'items-start'} relative`}>
-                        <div className={`relative max-w-[85%] p-3 rounded-2xl text-xs leading-relaxed shadow-lg ${
+                        <div className={`relative ${isExpanded ? 'max-w-md sm:max-w-xl' : 'max-w-[85%]'} p-3 rounded-2xl text-xs leading-relaxed shadow-lg ${
                           isClient 
                             ? 'bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white rounded-br-none border border-cyan-400/30' 
                             : 'bg-slate-900/90 text-gray-100 border border-white/15 rounded-bl-none'
@@ -579,7 +668,7 @@ export default function WhatsAppWidget() {
                                   src={msg.mediaUrl} 
                                   alt="Attachment" 
                                   onClick={() => window.open(msg.mediaUrl, '_blank')}
-                                  className="rounded-xl max-h-48 max-w-full object-cover border border-white/20 hover:opacity-90 transition cursor-pointer"
+                                  className="rounded-xl max-h-56 max-w-full object-cover border border-white/20 hover:opacity-90 transition cursor-pointer"
                                 />
                               ) : (
                                 <a 
@@ -626,12 +715,15 @@ export default function WhatsAppWidget() {
 
               {/* Emoji Picker Popover */}
               {showEmojiPicker && (
-                <div className="absolute bottom-16 right-3 left-3 z-30 p-2.5 bg-slate-900 border border-cyan-500/40 rounded-2xl shadow-2xl grid grid-cols-8 gap-1 text-base animate-fade-in">
+                <div 
+                  ref={emojiPickerRef}
+                  className="absolute bottom-16 right-3 left-3 z-30 p-2.5 bg-slate-900 border border-cyan-500/40 rounded-2xl shadow-2xl grid grid-cols-8 gap-1 text-base animate-fade-in"
+                >
                   {popularEmojis.map((emoji) => (
                     <button
                       key={emoji}
                       type="button"
-                      onClick={() => { setInputText(prev => prev + emoji); setShowEmojiPicker(false); }}
+                      onClick={() => handleEmojiSelect(emoji)}
                       className="p-1.5 hover:bg-white/10 rounded-xl transition cursor-pointer text-center"
                     >
                       {emoji}
@@ -681,6 +773,7 @@ export default function WhatsAppWidget() {
 
                 {/* Emoji Button */}
                 <button
+                  ref={emojiBtnRef}
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   className="text-gray-400 hover:text-amber-300 transition p-2 rounded-xl hover:bg-white/10 cursor-pointer"
@@ -691,10 +784,12 @@ export default function WhatsAppWidget() {
 
                 {/* Text Input */}
                 <input
+                  ref={inputRef}
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="اكتب رسالتك هنا..."
+                  onKeyDown={handleKeyDown}
+                  placeholder="اكتب رسالتك هنا... (اضغط Enter للإرسال)"
                   className="flex-1 bg-slate-900 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400"
                 />
 
@@ -718,7 +813,7 @@ export default function WhatsAppWidget() {
       {!isExpanded && (
         <button
           onClick={handleTriggerClick}
-          className="relative flex items-center gap-2 bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 hover:from-green-400 hover:to-teal-500 text-white font-black px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(16,185,129,0.5)] border-2 border-emerald-300 transition-all transform hover:scale-105 active:scale-95 cursor-pointer"
+          className="relative flex items-center gap-2 bg-gradient-to-r from-green-500 via-emerald-600 to-teal-600 hover:from-green-400 hover:to-teal-500 text-white font-black px-4 py-3 rounded-full shadow-[0_8px_30px_rgba(16,185,129,0.5)] border-2 border-emerald-300 transition-all transform hover:scale-105 active:scale-95 cursor-pointer z-50"
         >
           <MessageCircle size={22} className="animate-bounce shrink-0" />
           <span className="text-xs tracking-wide whitespace-nowrap">تواصل معنا</span>

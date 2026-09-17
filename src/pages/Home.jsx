@@ -16,15 +16,29 @@ import logoImg from '../assets/logo.jpg';
 export default function Home({ onOpenRegister }) {
 
   const handleOpenWhatsApp = () => {
+    const phone = localStorage.getItem('visitorPhone') || '';
+    if (!phone) {
+      window.location.href = '/login';
+      return;
+    }
     window.dispatchEvent(new Event('open_whatsapp_widget'));
   };
 
   return (
-    <div className="home-page animate-fade-in">
+    <div className="home-page animate-fade-in relative overflow-hidden">
       
+      {/* 3D Glassmorphism Logo Watermark Background for Page */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-5 overflow-hidden z-0">
+        <img 
+          src="/logo.jpg" 
+          alt="3D Logo Watermark" 
+          className="w-[600px] h-[600px] rounded-full object-cover blur-[2px] scale-150 transform rotate-12 border-4 border-cyan-400/20" 
+        />
+      </div>
+
       {/* Hero Section */}
-      <section className="hero" style={{ 
-        minHeight: '90vh', 
+      <section className="hero relative z-10" style={{ 
+        minHeight: '85vh', 
         display: 'flex', 
         alignItems: 'center', 
         position: 'relative', 
@@ -46,9 +60,9 @@ export default function Home({ onOpenRegister }) {
             <div className="flex justify-center md:justify-end gap-4 mt-6">
               <button 
                 onClick={handleOpenWhatsApp}
-                className="flex items-center gap-2 font-bold cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white px-7 py-3.5 rounded-2xl shadow-[0_10px_35px_rgba(16,185,129,0.4)] border border-emerald-300/40 transition-all transform hover:scale-105 active:scale-95 text-base"
+                className="flex items-center gap-2 font-bold cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white px-5 py-3 rounded-xl shadow-[0_8px_25px_rgba(16,185,129,0.35)] border border-emerald-300/40 transition-all transform hover:scale-105 active:scale-95 text-xs sm:text-sm"
               >
-                <MessageCircle size={22} className="animate-bounce" />
+                <MessageCircle size={18} className="animate-bounce" />
                 <span>تواصل معنا عبر الواتساب</span>
               </button>
             </div>
@@ -59,11 +73,6 @@ export default function Home({ onOpenRegister }) {
             <div className="relative p-6 sm:p-8 bg-slate-900/60 backdrop-blur-2xl border border-cyan-500/30 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] border-t-2 border-t-cyan-400 transform hover:scale-[1.02] transition-all duration-500 z-10">
               <img src={logoImg} alt="Etegah Logo" className="w-full max-w-sm sm:max-w-md rounded-2xl object-cover shadow-2xl border border-white/10" />
             </div>
-
-            {/* 3D Glassmorphism Watermark Background */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-15 overflow-hidden z-0">
-              <img src={logoImg} alt="Watermark" className="w-96 h-96 rounded-full object-cover blur-[3px] scale-150 transform rotate-12" />
-            </div>
           </div>
         </div>
         
@@ -72,32 +81,32 @@ export default function Home({ onOpenRegister }) {
       </section>
 
       {/* About Section - "What is Etegah?" */}
-      <section style={{ padding: '8rem 0', background: 'rgba(255,255,255,0.02)' }}>
+      <section className="relative z-10" style={{ padding: '6rem 0', background: 'rgba(255,255,255,0.02)' }}>
         <div className="container">
-          <div className="flex flex-col md:flex-row gap-24 items-center">
+          <div className="flex flex-col md:flex-row gap-16 items-center">
             <div style={{ flex: 1, order: 2 }}>
               <div className="about-grid">
                 <div className="card glass about-card backdrop-blur-xl border border-white/10 shadow-2xl">
-                  <ShieldCheck size={40} color="var(--primary-blue)" />
+                  <ShieldCheck size={36} color="var(--primary-blue)" />
                   <h4>أمان تام</h4>
                 </div>
                 <div className="card glass about-card offset backdrop-blur-xl border border-white/10 shadow-2xl">
-                  <Cpu size={40} color="var(--primary-blue)" />
+                  <Cpu size={36} color="var(--primary-blue)" />
                   <h4>ذكاء اصطناعي</h4>
                 </div>
                 <div className="card glass about-card backdrop-blur-xl border border-white/10 shadow-2xl">
-                  <Zap size={40} color="var(--primary-blue)" />
+                  <Zap size={36} color="var(--primary-blue)" />
                   <h4>سرعة لحظية</h4>
                 </div>
                 <div className="card glass about-card offset backdrop-blur-xl border border-white/10 shadow-2xl">
-                  <Globe size={40} color="var(--primary-blue)" />
+                  <Globe size={36} color="var(--primary-blue)" />
                   <h4>تغطية شاملة</h4>
                 </div>
               </div>
             </div>
             
             <div style={{ flex: 1.2 }}>
-              <h2 style={{ fontSize: '2.8rem', marginBottom: '1.5rem' }}>ما هي منصة اتجاه؟</h2>
+              <h2 style={{ fontSize: '2.5rem', marginBottom: '1.2rem' }}>ما هي منصة اتجاه؟</h2>
               <p className="about-text">
                 منصة "اتجاه" هي شريكك الرقمي في عالم التداول، نجمع بين عراقة التحليل المالي وأحدث ابتكارات الذكاء الاصطناعي (AI) لتمكين المتداول في السوق السعودي من قراءة السوق برؤية أعمق، بعيداً عن العشوائية.
               </p>
@@ -116,9 +125,9 @@ export default function Home({ onOpenRegister }) {
       </section>
 
       {/* Value Proposition */}
-      <section className="container" style={{ padding: '6rem 0' }}>
-        <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>لماذا يختار المتداولون "اتجاه"؟</h2>
+      <section className="container relative z-10" style={{ padding: '5rem 0' }}>
+        <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+          <h2 style={{ fontSize: '2.2rem', marginBottom: '1rem' }}>لماذا يختار المتداولون "اتجاه"؟</h2>
           <p style={{ color: 'var(--text-light)', maxWidth: '700px', margin: '0 auto' }}>قوة التكنولوجيا بين يديك لتحقيق أهدافك المالية.</p>
         </div>
         
@@ -150,17 +159,17 @@ export default function Home({ onOpenRegister }) {
       </section>
 
       {/* CTA Section */}
-      <section className="container mt-8 mb-16">
-        <div className="cta-box card glass backdrop-blur-2xl border border-cyan-500/20 shadow-2xl">
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>ابدأ استثمارك بذكاء اليوم</h2>
-          <p className="cta-text">
+      <section className="container mt-6 mb-12 relative z-10">
+        <div className="cta-box card glass backdrop-blur-2xl border border-cyan-500/20 shadow-2xl p-6 sm:p-8 text-center max-w-2xl mx-auto">
+          <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>ابدأ استثمارك بذكاء اليوم</h2>
+          <p className="cta-text text-gray-300 text-xs sm:text-sm mb-5 leading-relaxed max-w-md mx-auto">
             انضم إلى مئات المتداولين الذين يستخدمون منصة اتجاه يومياً لتحسين أدائهم في السوق السعودي.
           </p>
           <button 
             onClick={handleOpenWhatsApp}
-            className="flex items-center gap-2 font-bold mx-auto cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white px-8 py-4 rounded-2xl shadow-[0_10px_35px_rgba(16,185,129,0.4)] border border-emerald-300/40 transition-all transform hover:scale-105 active:scale-95 text-lg"
+            className="flex items-center gap-2 font-bold mx-auto cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white px-5 py-2.5 rounded-xl shadow-[0_8px_25px_rgba(16,185,129,0.35)] border border-emerald-300/40 transition-all transform hover:scale-105 active:scale-95 text-xs sm:text-sm"
           >
-            <MessageCircle size={24} />
+            <MessageCircle size={18} />
             <span>تواصل معنا عبر الواتساب الآن</span>
           </button>
         </div>
