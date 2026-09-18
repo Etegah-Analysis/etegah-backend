@@ -31,12 +31,12 @@ export default function Home({ onOpenRegister }) {
       <section className="hero relative z-10 py-6 md:py-10">
         <div className="container bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_25px_70px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-6 sm:p-10 rounded-3xl flex flex-col md:flex-row items-center gap-8 relative z-10 overflow-hidden">
           
-          {/* Logo Box directly embedded in container */}
+          {/* Logo directly integrated inside single window container */}
           <div className="w-full md:w-5/12 flex justify-center items-center">
             <img 
               src={logoImg} 
               alt="Etegah Logo" 
-              className="w-full max-w-sm sm:max-w-md rounded-2xl object-cover shadow-[0_15px_50px_rgba(0,0,0,0.8)] border border-cyan-400/30 transform hover:scale-[1.02] transition-all duration-500" 
+              className="w-full max-w-sm sm:max-w-md rounded-2xl object-cover drop-shadow-[0_15px_40px_rgba(6,182,212,0.35)] transform hover:scale-[1.02] transition-all duration-500" 
             />
           </div>
 
