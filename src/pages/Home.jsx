@@ -31,7 +31,7 @@ export default function Home({ onOpenRegister }) {
       <section className="hero relative z-10 py-6 md:py-10">
         <div className="container flex flex-col md:flex-row items-center gap-8 sm:gap-12 relative z-10">
           
-          {/* Circular 3D Glowing Glass Logo (Standalone, No Window Box, Medium Size) */}
+          {/* Circular 3D Glowing Glass Logo (Standalone, Balanced Proportional Size) */}
           <div className="w-full md:w-5/12 flex justify-center items-center">
             <div className="relative group p-3">
               {/* Glowing Ambient Aura */}
@@ -39,13 +39,13 @@ export default function Home({ onOpenRegister }) {
               <img 
                 src={logoImg} 
                 alt="Etegah Logo" 
-                className="w-48 h-48 sm:w-64 sm:h-64 rounded-full object-cover shadow-[0_0_60px_rgba(6,182,212,0.6)] border-4 border-cyan-400/50 backdrop-blur-md transform group-hover:scale-105 transition-all duration-500 relative z-10" 
+                className="w-52 h-52 sm:w-64 sm:h-64 md:w-72 md:h-72 rounded-full object-cover shadow-[0_0_60px_rgba(6,182,212,0.6)] border-4 border-cyan-400/50 backdrop-blur-md transform group-hover:scale-105 transition-all duration-500 relative z-10" 
               />
             </div>
           </div>
 
           {/* Text Content Card Window - Standalone 3D Glass */}
-          <div className="hero-content w-full md:w-7/12 bg-gradient-to-bl from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.3)] border-t-2 border-t-cyan-400 p-6 sm:p-10 rounded-3xl flex flex-col justify-center text-center md:text-right relative overflow-hidden">
+          <div className="hero-content w-full md:w-7/12 min-h-[300px] bg-gradient-to-bl from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.3)] border-t-2 border-t-cyan-400 p-6 sm:p-8 rounded-3xl flex flex-col justify-center text-center md:text-right relative overflow-hidden">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-xs font-bold mb-6 shadow-[0_0_20px_rgba(6,182,212,0.2)] self-center md:self-start">
               <SparklesIcon /> مستقبل التداول الذكي في السوق السعودي والخليجي
             </div>
