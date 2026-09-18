@@ -27,19 +27,19 @@ export default function Home({ onOpenRegister }) {
   return (
     <div className="home-page animate-fade-in relative z-10 py-6">
       
-      {/* Hero Section with Separated 3D Glowing Glass Windows */}
+      {/* Hero Section with Standalone Circular 3D Glowing Glass Logo & Text Window */}
       <section className="hero relative z-10 py-6 md:py-10">
-        <div className="container flex flex-col md:flex-row items-stretch gap-6 sm:gap-8 relative z-10">
+        <div className="container flex flex-col md:flex-row items-center gap-8 sm:gap-12 relative z-10">
           
-          {/* Logo Card Window - Standalone 3D Glowing Glass */}
+          {/* Circular 3D Glowing Glass Logo (Standalone, No Window Box, Medium Size) */}
           <div className="w-full md:w-5/12 flex justify-center items-center">
-            <div className="w-full h-full min-h-[300px] bg-gradient-to-br from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-400/50 shadow-[0_20px_60px_rgba(6,182,212,0.35)] border-t-2 border-t-cyan-300 p-6 rounded-3xl flex justify-center items-center relative overflow-hidden group transform hover:scale-[1.02] transition-all duration-500">
-              {/* Glowing Ambient Backdrop */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/15 via-transparent to-blue-500/15 pointer-events-none"></div>
+            <div className="relative group p-3">
+              {/* Glowing Ambient Aura */}
+              <div className="absolute inset-0 rounded-full bg-cyan-400/25 blur-3xl group-hover:bg-cyan-400/40 transition-all duration-500 pointer-events-none"></div>
               <img 
                 src={logoImg} 
                 alt="Etegah Logo" 
-                className="w-full max-w-xs sm:max-w-sm rounded-2xl object-cover shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-cyan-400/30 transform group-hover:scale-105 transition-all duration-500" 
+                className="w-48 h-48 sm:w-64 sm:h-64 rounded-full object-cover shadow-[0_0_60px_rgba(6,182,212,0.6)] border-4 border-cyan-400/50 backdrop-blur-md transform group-hover:scale-105 transition-all duration-500 relative z-10" 
               />
             </div>
           </div>
@@ -181,18 +181,18 @@ export default function Home({ onOpenRegister }) {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="container my-12 relative z-10">
-        <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.2)] p-8 sm:p-10 rounded-3xl text-center max-w-2xl mx-auto border-t-2 border-t-cyan-400">
-          <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">ابدأ استثمارك بذكاء اليوم</h2>
-          <p className="text-gray-300 text-xs sm:text-sm mb-6 leading-relaxed max-w-md mx-auto">
+      {/* CTA Section - Compact Glass Window */}
+      <section className="container my-10 relative z-10">
+        <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_15px_45px_rgba(6,182,212,0.2)] p-6 sm:p-7 rounded-2xl text-center max-w-lg mx-auto border-t-2 border-t-cyan-400">
+          <h2 className="text-xl sm:text-2xl font-black text-white mb-2">ابدأ استثمارك بذكاء اليوم</h2>
+          <p className="text-gray-300 text-xs mb-5 leading-relaxed max-w-sm mx-auto">
             انضم إلى مئات المتداولين الذين يستخدمون منصة اتجاه يومياً لتحسين أدائهم وتداولاتهم.
           </p>
           <button 
             onClick={handleOpenWhatsApp}
-            className="flex items-center gap-2.5 font-bold mx-auto cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white px-6 py-3 rounded-2xl shadow-[0_8px_25px_rgba(16,185,129,0.35)] border border-emerald-300/40 transition-all transform hover:scale-105 active:scale-95 text-xs sm:text-sm"
+            className="flex items-center gap-2.5 font-bold mx-auto cursor-pointer bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white px-5 py-2.5 rounded-xl shadow-[0_6px_20px_rgba(16,185,129,0.35)] border border-emerald-300/40 transition-all transform hover:scale-105 active:scale-95 text-xs"
           >
-            <MessageCircle size={18} />
+            <MessageCircle size={16} />
             <span>تواصل معنا عبر الواتساب الآن</span>
           </button>
         </div>
