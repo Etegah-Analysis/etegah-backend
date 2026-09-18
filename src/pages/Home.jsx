@@ -27,22 +27,26 @@ export default function Home({ onOpenRegister }) {
   return (
     <div className="home-page animate-fade-in relative z-10 py-6">
       
-      {/* Hero Section */}
+      {/* Hero Section with Separated 3D Glowing Glass Windows */}
       <section className="hero relative z-10 py-6 md:py-10">
-        <div className="container bg-gradient-to-r from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_25px_70px_rgba(6,182,212,0.25)] border-t-2 border-t-cyan-400 p-6 sm:p-10 rounded-3xl flex flex-col md:flex-row items-center gap-8 relative z-10 overflow-hidden">
+        <div className="container flex flex-col md:flex-row items-stretch gap-6 sm:gap-8 relative z-10">
           
-          {/* Logo directly integrated inside single window container */}
+          {/* Logo Card Window - Standalone 3D Glowing Glass */}
           <div className="w-full md:w-5/12 flex justify-center items-center">
-            <img 
-              src={logoImg} 
-              alt="Etegah Logo" 
-              className="w-full max-w-sm sm:max-w-md rounded-2xl object-cover drop-shadow-[0_15px_40px_rgba(6,182,212,0.35)] transform hover:scale-[1.02] transition-all duration-500" 
-            />
+            <div className="w-full h-full min-h-[300px] bg-gradient-to-br from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-400/50 shadow-[0_20px_60px_rgba(6,182,212,0.35)] border-t-2 border-t-cyan-300 p-6 rounded-3xl flex justify-center items-center relative overflow-hidden group transform hover:scale-[1.02] transition-all duration-500">
+              {/* Glowing Ambient Backdrop */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/15 via-transparent to-blue-500/15 pointer-events-none"></div>
+              <img 
+                src={logoImg} 
+                alt="Etegah Logo" 
+                className="w-full max-w-xs sm:max-w-sm rounded-2xl object-cover shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-cyan-400/30 transform group-hover:scale-105 transition-all duration-500" 
+              />
+            </div>
           </div>
 
-          {/* Hero Content on Right */}
-          <div className="hero-content w-full md:w-7/12 text-center md:text-right flex-1">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-xs font-bold mb-6 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+          {/* Text Content Card Window - Standalone 3D Glass */}
+          <div className="hero-content w-full md:w-7/12 bg-gradient-to-bl from-slate-900/90 via-indigo-950/90 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_20px_60px_rgba(6,182,212,0.3)] border-t-2 border-t-cyan-400 p-6 sm:p-10 rounded-3xl flex flex-col justify-center text-center md:text-right relative overflow-hidden">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-xs font-bold mb-6 shadow-[0_0_20px_rgba(6,182,212,0.2)] self-center md:self-start">
               <SparklesIcon /> مستقبل التداول الذكي في السوق السعودي والخليجي
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight text-white mb-6">

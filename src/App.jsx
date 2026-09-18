@@ -20,13 +20,18 @@ import InstallPWA from './components/InstallPWA';
 function PublicLayout({ children }) {
   return (
     <div className="min-h-screen bg-[#0B1120] text-white flex flex-col font-sans relative overflow-hidden">
-      {/* 3D Glassmorphism Logo Watermark Background */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none opacity-10 overflow-hidden z-0">
-        <img 
-          src="/logo.jpg" 
-          alt="3D Logo Watermark" 
-          className="w-[650px] h-[650px] rounded-full object-cover blur-[2px] scale-150 transform rotate-12 shadow-[0_0_90px_rgba(6,182,212,0.6)] border-4 border-cyan-400/20" 
-        />
+      {/* 3D Glassmorphism Glowing Logo Watermark Background (Non-obstructive) */}
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.06] overflow-hidden z-0">
+        <div className="relative flex flex-col items-center justify-center transform -rotate-12 scale-125">
+          <img 
+            src="/logo.jpg" 
+            alt="3D Logo Watermark" 
+            className="w-[550px] h-[550px] rounded-full object-cover backdrop-blur-xl drop-shadow-[0_0_80px_rgba(6,182,212,0.6)] border-4 border-cyan-400/40 shadow-[0_0_120px_rgba(6,182,212,0.4)]" 
+          />
+          <span className="text-4xl font-black tracking-widest text-cyan-300 mt-6 drop-shadow-[0_0_20px_rgba(6,182,212,0.8)] font-sans">
+            اتجاه للتحليل الذكي
+          </span>
+        </div>
       </div>
       {/* Ambient Glow Effects */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
