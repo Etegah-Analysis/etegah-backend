@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Award, Sparkles, Video, ArrowLeft, FileText, Download, Calendar, Clock, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Play, Award, Sparkles, Video, ArrowLeft, FileText, Download, Calendar, Clock, ExternalLink, ShieldCheck, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { db, collection, onSnapshot } from '../firebase';
+import { db, collection, onSnapshot, deleteDoc, doc } from '../firebase';
+import { toast } from 'react-hot-toast';
 
 export default function PlatformVideos() {
   const [reports, setReports] = useState({ saudi: null, us: null });
   const [videoList, setVideoList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPdfReport, setSelectedPdfReport] = useState(null);
+  const isEmp = localStorage.getItem('isEmpLoggedIn') === 'true' || localStorage.getItem('visitorName')?.includes('Admin') || localStorage.getItem('visitorName')?.includes('إدارة');
 
   useEffect(() => {
     document.title = 'فيديوهات المنصة والنتائج السابقة - اتجاه للتحليل الذكي';
@@ -44,6 +46,19 @@ export default function PlatformVideos() {
       unsubVideos();
     };
   }, []);
+
+  const handleDeleteVideo = async (videoId, videoTitle) => {
+    if (!window.confirm(`هل أنت تأكد من رغبتك في حذف فيديو "${videoTitle || 'هذا الفيديو'}" من موقع المنصة فوراً؟`)) {
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, 'platform_videos', videoId));
+      toast.success('تم حذف الفيديو من موقع المنصة بنجاح 🗑️✨');
+    } catch (err) {
+      console.error('Error deleting video:', err);
+      toast.error('حدث خطأ أثناء حذف الفيديو');
+    }
+  };
 
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6 font-sans relative z-10 text-white" dir="rtl">
@@ -286,7 +301,17 @@ export default function PlatformVideos() {
 
                   <div className="pt-3 border-t border-cyan-500/20 text-[10px] text-slate-400 flex justify-between items-center">
                     <span>تاريخ النشر: {video.uploadedAtFormatted || 'مؤخراً'}</span>
-                    {video.uploadedBy && <span className="text-cyan-300 font-semibold">{video.uploadedBy}</span>}
+                    <div className="flex items-center gap-2">
+                      {video.uploadedBy && <span className="text-cyan-300 font-semibold">{video.uploadedBy}</span>}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteVideo(video.id, video.title)}
+                        className="p-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 transition cursor-pointer"
+                        title="حذف الفيديو فوراً من الموقع"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -356,13 +381,33 @@ export default function PlatformVideos() {
               </div>
             </div>
 
-            {/* Modal Body: PDF Iframe Viewer */}
-            <div className="flex-1 bg-slate-950 p-2 sm:p-4 overflow-hidden relative">
-              <iframe
-                src={selectedPdfReport.pdfUrl}
-                className="w-full h-full min-h-[60vh] sm:min-h-[70vh] rounded-2xl border border-cyan-500/20 shadow-inner bg-slate-900"
-                title="معاينة التقرير"
-              />
+            {/* Modal Body: Multi-Fallback PDF Viewer */}
+            <div className="flex-1 bg-slate-950 p-2 sm:p-4 overflow-hidden relative flex flex-col items-center justify-center">
+              {(() => {
+                const url = selectedPdfReport.pdfUrl || '';
+                const isBase64 = url.startsWith('data:');
+                const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+
+                if (isBase64) {
+                  return (
+                    <object
+                      data={url}
+                      type="application/pdf"
+                      className="w-full h-full min-h-[60vh] sm:min-h-[70vh] rounded-2xl border border-cyan-500/20 shadow-inner bg-slate-900"
+                    >
+                      <embed src={url} type="application/pdf" className="w-full h-full min-h-[60vh] sm:min-h-[70vh] rounded-2xl" />
+                    </object>
+                  );
+                }
+
+                return (
+                  <iframe
+                    src={googleViewerUrl}
+                    className="w-full h-full min-h-[60vh] sm:min-h-[70vh] rounded-2xl border border-cyan-500/20 shadow-inner bg-slate-900"
+                    title="معاينة التقرير"
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>

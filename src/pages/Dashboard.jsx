@@ -8842,6 +8842,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
         }).catch(() => {});
 
         toast.success(`تم نشر وتحويل تقرير ${marketTitle} على موقع المنصة وإرسال التنبيه للعملاء بنجاح 🚀✨`, { id: toastId, duration: 6000 });
+        setPdfReportModalMarket(null);
       } catch (err) {
         console.error('Error publishing weekly PDF report:', err);
         toast.error('حدث خطأ أثناء الرفع والتحويل لموقع المنصة: ' + (err.message || ''), { id: toastId });
@@ -8872,6 +8873,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
       });
 
       toast.success(`تم حذف وإلغاء نشر تقرير ${marketTitle} من موقع المنصة بنجاح وتحديث الموقع فوراً 🗑️✨`, { id: toastId, duration: 5000 });
+      setPdfReportModalMarket(null);
     } catch (err) {
       console.error('Error deleting weekly PDF report:', err);
       toast.error('حدث خطأ أثناء حذف التقرير من الموقع: ' + (err.message || ''), { id: toastId });
@@ -22829,8 +22831,15 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
 
         {/* PLATFORM VIDEO UPLOADER MODAL (v2.26) */}
         {isUploadVideoModalOpen && (
-          <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto" dir="rtl">
-            <div className="bg-slate-900 border-2 border-purple-500/40 text-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95">
+          <div 
+            onClick={() => setIsUploadVideoModalOpen(false)}
+            className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto cursor-pointer" 
+            dir="rtl"
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="bg-slate-900 border-2 border-purple-500/40 text-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 cursor-default"
+            >
               <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-400/30">
