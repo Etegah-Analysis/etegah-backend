@@ -92,32 +92,62 @@ export default function Navbar() {
     };
   }, [visitorPhone]);
 
-  // 3. Real-time broadcast listener for platform PDF reports & strategy videos
+  // 3. Real-time broadcast listener for platform PDF reports, videos & notifications
   useEffect(() => {
-    const qPlatform = query(
-      collection(db, 'platform_notifications'),
-      orderBy('createdAt', 'desc'),
-      limit(20)
-    );
+    let platformFromDb = [];
+    let reportsFromDb = [];
 
-    const unsubPlatform = onSnapshot(qPlatform, (snap) => {
-      const platformNotifs = snap.docs.map(d => {
+    const unsubPlatform = onSnapshot(collection(db, 'platform_notifications'), (snap) => {
+      platformFromDb = snap.docs.map(d => {
         const data = d.data();
         return {
           id: d.id,
           isPlatformNotif: true,
           senderName: data.title || (data.type === 'pdf_report' ? '📄 تقرير أسبوعي جديد' : '🎥 فيديو جديد بالمنصة'),
-          text: data.body || data.message || 'انقر للإطلاع والتحميل',
+          text: data.body || (data.type === 'pdf_report' ? 'المكان: صفحة فيديوهات المنصة والنتائج السابقة (انقر للمعاينة والتحميل 📄)' : 'المكان: صفحة فيديوهات المنصة والنتائج السابقة (انقر للمشاهدة 🎥)'),
           url: data.url || '/platform-videos',
           timestamp: data.createdAt || data.timestamp,
+          timestampMillis: data.timestampMillis || (data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now()),
           type: data.type,
           market: data.market
         };
       });
-      setPlatformNotifications(platformNotifs);
+      updateCombinedPlatformNotifs();
     }, (err) => console.warn("Navbar platform notifications error:", err));
 
-    return () => unsubPlatform();
+    const unsubWeekly = onSnapshot(collection(db, 'weekly_reports'), (snap) => {
+      reportsFromDb = [];
+      snap.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data && data.pdfUrl && data.pdfUrl !== '#') {
+          const isSaudi = data.market === 'saudi' || docSnap.id === 'saudi_latest';
+          reportsFromDb.push({
+            id: 'weekly_report_live_' + docSnap.id,
+            isPlatformNotif: true,
+            senderName: isSaudi ? '📄 تم رفع التقرير الأسبوعي للسوق السعودي' : '📄 تم رفع التقرير الأسبوعي للسوق الأمريكي',
+            text: `المكان: صفحة فيديوهات المنصة والنتائج السابقة 📄 (${data.uploadedAtFormatted || 'تقرير أسبوعي معتمد'})`,
+            url: '/platform-videos',
+            timestamp: data.uploadedAt || data.createdAt,
+            timestampMillis: data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now(),
+            type: 'pdf_report',
+            market: data.market || (isSaudi ? 'saudi' : 'us')
+          });
+        }
+      });
+      updateCombinedPlatformNotifs();
+    }, (err) => console.warn("Navbar weekly reports error:", err));
+
+    function updateCombinedPlatformNotifs() {
+      const combined = [...platformFromDb, ...reportsFromDb];
+      const uniqueMap = new Map();
+      combined.forEach(item => uniqueMap.set(item.id, item));
+      setPlatformNotifications(Array.from(uniqueMap.values()));
+    }
+
+    return () => {
+      unsubPlatform();
+      unsubWeekly();
+    };
   }, []);
 
   // Merge chat and platform notifications
