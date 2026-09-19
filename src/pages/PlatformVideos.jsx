@@ -7,6 +7,7 @@ export default function PlatformVideos() {
   const [reports, setReports] = useState({ saudi: null, us: null });
   const [videoList, setVideoList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPdfReport, setSelectedPdfReport] = useState(null);
 
   useEffect(() => {
     document.title = 'فيديوهات المنصة والنتائج السابقة - اتجاه للتحليل الذكي';
@@ -137,16 +138,20 @@ export default function PlatformVideos() {
               {/* Action Button */}
               <div>
                 {reports.saudi?.pdfUrl ? (
-                  <a
-                    href={reports.saudi.pdfUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02]"
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPdfReport({
+                      title: 'التقرير الأسبوعي للسوق السعودي 🇸🇦',
+                      pdfUrl: reports.saudi.pdfUrl,
+                      uploadedAtFormatted: reports.saudi.uploadedAtFormatted,
+                      uploadedBy: reports.saudi.uploadedBy
+                    })}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
                     <Download size={16} />
                     <span>📄 عرض / تحميل التقرير (PDF)</span>
                     <ExternalLink size={14} className="opacity-80" />
-                  </a>
+                  </button>
                 ) : (
                   <button
                     disabled
@@ -198,16 +203,20 @@ export default function PlatformVideos() {
               {/* Action Button */}
               <div>
                 {reports.us?.pdfUrl ? (
-                  <a
-                    href={reports.us.pdfUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02]"
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPdfReport({
+                      title: 'التقرير الأسبوعي للسوق الأمريكي 🇺🇸',
+                      pdfUrl: reports.us.pdfUrl,
+                      uploadedAtFormatted: reports.us.uploadedAtFormatted,
+                      uploadedBy: reports.us.uploadedBy
+                    })}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
                     <Download size={16} />
                     <span>📄 عرض / تحميل التقرير (PDF)</span>
                     <ExternalLink size={14} className="opacity-80" />
-                  </a>
+                  </button>
                 ) : (
                   <button
                     disabled
@@ -286,6 +295,78 @@ export default function PlatformVideos() {
         </div>
 
       </div>
+
+      {/* PDF Viewer & Preview Modal */}
+      {selectedPdfReport && (
+        <div 
+          onClick={() => setSelectedPdfReport(null)}
+          className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border-2 border-cyan-500/50 rounded-3xl w-full max-w-5xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col max-h-[92vh]"
+            dir="rtl"
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-slate-950 via-cyan-950 to-slate-950 p-4 border-b border-cyan-500/30 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 text-xl shadow-md">
+                  📄
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                    <span>{selectedPdfReport.title}</span>
+                  </h3>
+                  {selectedPdfReport.uploadedAtFormatted && (
+                    <p className="text-xs text-cyan-300 font-mono mt-0.5">
+                      📅 {selectedPdfReport.uploadedAtFormatted} {selectedPdfReport.uploadedBy ? `• بواسطة ${selectedPdfReport.uploadedBy}` : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Tools */}
+              <div className="flex items-center gap-2">
+                <a
+                  href={selectedPdfReport.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-cyan-900/80 hover:bg-cyan-800 text-cyan-200 border border-cyan-400/40 text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow"
+                >
+                  <ExternalLink size={14} />
+                  <span>فتح بتبويب جديد ↗️</span>
+                </a>
+                <a
+                  href={selectedPdfReport.pdfUrl}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 shadow"
+                >
+                  <Download size={14} />
+                  <span>تحميل PDF 📥</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPdfReport(null)}
+                  className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/40 text-xs px-3 py-1.5 rounded-xl font-bold transition cursor-pointer"
+                >
+                  إغلاق ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: PDF Iframe Viewer */}
+            <div className="flex-1 bg-slate-950 p-2 sm:p-4 overflow-hidden relative">
+              <iframe
+                src={selectedPdfReport.pdfUrl}
+                className="w-full h-full min-h-[60vh] sm:min-h-[70vh] rounded-2xl border border-cyan-500/20 shadow-inner bg-slate-900"
+                title="معاينة التقرير"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
