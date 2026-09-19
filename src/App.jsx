@@ -48,7 +48,8 @@ function PublicLayout({ children }) {
 // A protected route wrapper for visitors
 function VisitorProtectedRoute({ children }) {
   const isVisitorLoggedIn = localStorage.getItem('visitorName');
-  if (!isVisitorLoggedIn) {
+  const isEmpLoggedIn = localStorage.getItem('isEmpLoggedIn') === 'true';
+  if (!isVisitorLoggedIn && !isEmpLoggedIn) {
     return <Navigate to="/visitor-login" replace />;
   }
   return children;

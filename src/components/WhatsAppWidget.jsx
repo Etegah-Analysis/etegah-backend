@@ -1085,7 +1085,19 @@ export default function WhatsAppWidget() {
               </div>
             </div>
 
-            {/* User Status Bar - Rendered strictly inside chat room */}
+            {localStorage.getItem('isEmpLoggedIn') === 'true' ? (
+              <div className="flex-1 p-6 flex flex-col items-center justify-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shadow-lg">
+                  <ShieldCheck size={32} />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-white">حساب موظف معتمد 👨‍💼</h3>
+                <p className="text-xs text-cyan-200 leading-relaxed max-w-xs bg-slate-900/80 p-3 rounded-2xl border border-cyan-500/20">
+                  أنت مسجل دخول كموظف بالمنصة ({localStorage.getItem('empAliasName') || 'الموظف'}). المحادثات المباشرة بالويدجيت مخصصة للعملاء فقط.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* User Status Bar - Rendered strictly inside chat room */}
             {widgetStep === 'chat_room' && (
               <div className="bg-cyan-950/40 px-4 py-2 border-b border-cyan-500/20 flex items-center justify-between text-[11px] shrink-0">
                 {/* Right Side: Connected Target Contact */}
@@ -1368,9 +1380,10 @@ export default function WhatsAppWidget() {
                 </form>
               </div>
             )}
-
-          </div>
+          </>
         )}
+      </div>
+    )}
 
         {/* Floating Trigger Button */}
         {!isExpanded && (
