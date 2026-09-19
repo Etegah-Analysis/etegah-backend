@@ -244,27 +244,33 @@ export default function Navbar() {
     setIsNotifOpen(false);
     setIsMobileMenuOpen(false);
 
-    if (visitorPhone) {
-      const savedReadIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
-      if (msgId && !savedReadIds.includes(msgId)) {
-        savedReadIds.push(msgId);
-        localStorage.setItem(`etegah_read_ids_${cleanPhone}`, JSON.stringify(savedReadIds));
-      }
-      setNotifications(prev => prev.filter(m => m.id !== msgId));
-      localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
-      setUnreadCount(0);
+    const savedReadIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
+    if (msgId && !savedReadIds.includes(msgId)) {
+      savedReadIds.push(msgId);
+      localStorage.setItem(`etegah_read_ids_${cleanPhone}`, JSON.stringify(savedReadIds));
     }
+    setNotifications(prev => prev.filter(m => m.id !== msgId));
+    localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
+    setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
   const handleClearAllNotifications = () => {
-    if (visitorPhone) {
-      const cleanPhone = visitorPhone.replace(/[^0-9]/g, '');
-      const allIds = notifications.map(m => m.id);
-      localStorage.setItem(`etegah_read_ids_${cleanPhone}`, JSON.stringify(allIds));
-      setNotifications([]);
-      localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
-      setUnreadCount(0);
-    }
+    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : 'guest';
+    const chatIds = notifications.filter(m => !m.isPlatformNotif).map(m => m.id);
+    const platformIds = notifications.filter(m => m.isPlatformNotif).map(m => m.id);
+
+    const savedReadChat = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
+    const savedReadPlatform = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${cleanPhone}`) || '[]');
+
+    const newChatIds = Array.from(new Set([...savedReadChat, ...chatIds]));
+    const newPlatformIds = Array.from(new Set([...savedReadPlatform, ...platformIds]));
+
+    localStorage.setItem(`etegah_read_ids_${cleanPhone}`, JSON.stringify(newChatIds));
+    localStorage.setItem(`etegah_read_platform_ids_${cleanPhone}`, JSON.stringify(newPlatformIds));
+    localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
+
+    setNotifications([]);
+    setUnreadCount(0);
   };
 
   const handleLogout = () => {
