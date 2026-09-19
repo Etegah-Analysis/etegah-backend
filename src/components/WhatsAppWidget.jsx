@@ -924,6 +924,22 @@ export default function WhatsAppWidget() {
     }
   };
 
+  const isAdminLoggedIn = (() => {
+    try {
+      const alias = (localStorage.getItem('empAliasName') || '').toLowerCase();
+      const title = (localStorage.getItem('empTitle') || '').toLowerCase();
+      const code = (localStorage.getItem('empCode') || '').toLowerCase();
+      const visitor = (localStorage.getItem('visitorName') || '').toLowerCase();
+      const isEmp = localStorage.getItem('isEmpLoggedIn') === 'true';
+      if (!isEmp && !visitor.includes('إدارة') && !visitor.includes('ادارة')) return false;
+      return alias.includes('إدارة') || alias.includes('ادارة') || alias.includes('admin') || 
+             title.includes('إدارة') || title.includes('ادارة') || title.includes('مدير') ||
+             code === 'admin' || visitor.includes('إدارة') || visitor.includes('ادارة');
+    } catch {
+      return false;
+    }
+  })();
+
   return (
     <>
       {/* Floating Ringing Call Banner / Modal */}
@@ -1099,7 +1115,7 @@ export default function WhatsAppWidget() {
               </div>
             </div>
 
-            {localStorage.getItem('isEmpLoggedIn') === 'true' ? (
+            {localStorage.getItem('isEmpLoggedIn') === 'true' && !isAdminLoggedIn ? (
               <div className="flex-1 p-6 flex flex-col items-center justify-center text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shadow-lg">
                   <ShieldCheck size={32} />

@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, MessageCircle, Bell, ShieldCheck, Trash2 } from 'lucide-react';
-import { db, collection, query, where, onSnapshot, doc, getDocs } from '../firebase';
+import { db } from '../firebase';
+import { collection, query, where, orderBy, limit, onSnapshot, doc, getDocs } from 'firebase/firestore';
 import logoImg from '../assets/logo.jpg';
 
 export default function Navbar() {
@@ -13,6 +14,8 @@ export default function Navbar() {
   const [empAliasName, setEmpAliasName] = useState('');
 
   const [notifications, setNotifications] = useState([]);
+  const [chatNotifications, setChatNotifications] = useState([]);
+  const [platformNotifications, setPlatformNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -80,28 +83,70 @@ export default function Navbar() {
         return tB - tA;
       });
 
-      const savedReadIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
-      const unreadFilteredMsgs = incomingMsgs.filter(m => !savedReadIds.includes(m.id));
-
-      setNotifications(unreadFilteredMsgs);
-
-      // Filter unread notifications count based on lastReadTimestamp
-      const savedLastRead = localStorage.getItem(`etegah_notif_last_read_${cleanPhone}`);
-      const lastReadTime = savedLastRead ? parseInt(savedLastRead, 10) : 0;
-
-      const unreadList = unreadFilteredMsgs.filter(m => {
-        const msgTime = m.timestamp?.toMillis ? m.timestamp.toMillis() : (m.timestamp ? new Date(m.timestamp).getTime() : 0);
-        return msgTime > lastReadTime;
-      });
-
-      setUnreadCount(unreadList.length);
-    }, (err) => console.error("Navbar notifications error:", err));
+      setChatNotifications(incomingMsgs);
+    }, (err) => console.error("Navbar chat notifications error:", err));
 
     return () => {
       unsubChat();
       unsubMsgs();
     };
+  }, [visitorPhone]);
+
+  // 3. Real-time broadcast listener for platform PDF reports & strategy videos
+  useEffect(() => {
+    const qPlatform = query(
+      collection(db, 'platform_notifications'),
+      orderBy('createdAt', 'desc'),
+      limit(20)
+    );
+
+    const unsubPlatform = onSnapshot(qPlatform, (snap) => {
+      const platformNotifs = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          isPlatformNotif: true,
+          senderName: data.title || (data.type === 'pdf_report' ? '📄 تقرير أسبوعي جديد' : '🎥 فيديو جديد بالمنصة'),
+          text: data.body || data.message || 'انقر للإطلاع والتحميل',
+          url: data.url || '/platform-videos',
+          timestamp: data.createdAt || data.timestamp,
+          type: data.type,
+          market: data.market
+        };
+      });
+      setPlatformNotifications(platformNotifs);
+    }, (err) => console.warn("Navbar platform notifications error:", err));
+
+    return () => unsubPlatform();
   }, []);
+
+  // Merge chat and platform notifications
+  useEffect(() => {
+    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : 'guest';
+    const savedReadMsgIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
+    const savedReadPlatformIds = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${cleanPhone}`) || '[]');
+
+    const filteredChatMsgs = chatNotifications.filter(m => !savedReadMsgIds.includes(m.id));
+    const filteredPlatformMsgs = platformNotifications.filter(m => !savedReadPlatformIds.includes(m.id));
+
+    const merged = [...filteredChatMsgs, ...filteredPlatformMsgs].sort((a, b) => {
+      const tA = a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.timestamp ? new Date(a.timestamp).getTime() : (a.timestampMillis || 0));
+      const tB = b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.timestamp ? new Date(b.timestamp).getTime() : (b.timestampMillis || 0));
+      return tB - tA;
+    });
+
+    setNotifications(merged);
+
+    const savedLastRead = localStorage.getItem(`etegah_notif_last_read_${cleanPhone}`);
+    const lastReadTime = savedLastRead ? parseInt(savedLastRead, 10) : 0;
+
+    const unreadList = merged.filter(m => {
+      const msgTime = m.timestamp?.toMillis ? m.timestamp.toMillis() : (m.timestamp ? new Date(m.timestamp).getTime() : (m.timestampMillis || 0));
+      return msgTime > lastReadTime;
+    });
+
+    setUnreadCount(unreadList.length);
+  }, [chatNotifications, platformNotifications, visitorPhone]);
 
   // Listen to custom window events for clearing notifications
   useEffect(() => {
@@ -149,12 +194,27 @@ export default function Navbar() {
   };
 
   const handleOpenNotificationMessage = (msgId) => {
+    const targetMsg = notifications.find(m => m.id === msgId);
+    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : 'guest';
+
+    if (targetMsg?.isPlatformNotif) {
+      const savedReadPlatform = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${cleanPhone}`) || '[]');
+      if (msgId && !savedReadPlatform.includes(msgId)) {
+        savedReadPlatform.push(msgId);
+        localStorage.setItem(`etegah_read_platform_ids_${cleanPhone}`, JSON.stringify(savedReadPlatform));
+      }
+      setNotifications(prev => prev.filter(m => m.id !== msgId));
+      setIsNotifOpen(false);
+      setIsMobileMenuOpen(false);
+      navigate(targetMsg.url || '/platform-videos');
+      return;
+    }
+
     window.dispatchEvent(new CustomEvent('open_whatsapp_widget', { detail: { targetMsgId: msgId } }));
     setIsNotifOpen(false);
     setIsMobileMenuOpen(false);
 
     if (visitorPhone) {
-      const cleanPhone = visitorPhone.replace(/[^0-9]/g, '');
       const savedReadIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
       if (msgId && !savedReadIds.includes(msgId)) {
         savedReadIds.push(msgId);
@@ -246,11 +306,11 @@ export default function Navbar() {
           <Link to="/" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
             الرئيسية
           </Link>
-          <Link to="/news" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
-            أخبار السوق السعودي
-          </Link>
           <Link to="/platform-videos" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
             فيديوهات المنصة والنتائج السابقة
+          </Link>
+          <Link to="/news" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+            أخبار السوق السعودي
           </Link>
           <Link to="/us-options" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
             أخبار السوق الأمريكي
@@ -304,11 +364,12 @@ export default function Navbar() {
                               className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-950/40 border border-white/5 hover:border-cyan-500/30 transition cursor-pointer"
                             >
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-white text-[11px]">
+                                <span className="font-bold text-white text-[11px] flex items-center gap-1">
+                                  {msg.isPlatformNotif ? (msg.type === 'pdf_report' ? '📄 ' : '🎥 ') : null}
                                   {msg.senderName || (msg.sender === 'admin' ? '👑 الإدارة' : (empAliasName || 'خدمة العملاء'))}
                                 </span>
                                 <span className="text-[9px] text-cyan-400 font-mono">
-                                  {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                  {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '')}
                                 </span>
                               </div>
                               <p className="text-gray-300 text-[11px] line-clamp-2 dir-auto">

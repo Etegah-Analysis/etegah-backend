@@ -1,15 +1,52 @@
-import React, { useEffect } from 'react';
-import { Play, Award, Sparkles, Video, ArrowLeft } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Play, Award, Sparkles, Video, ArrowLeft, FileText, Download, Calendar, Clock, ExternalLink, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { db, collection, onSnapshot } from '../firebase';
 
 export default function PlatformVideos() {
+  const [reports, setReports] = useState({ saudi: null, us: null });
+  const [videoList, setVideoList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     document.title = 'فيديوهات المنصة والنتائج السابقة - اتجاه للتحليل الذكي';
+
+    const unsubReports = onSnapshot(collection(db, 'weekly_reports'), (snapshot) => {
+      const reportsMap = { saudi: null, us: null };
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.market === 'saudi' || docSnap.id === 'saudi_latest') {
+          reportsMap.saudi = data;
+        } else if (data.market === 'us' || docSnap.id === 'us_latest') {
+          reportsMap.us = data;
+        }
+      });
+      setReports(reportsMap);
+      setLoading(false);
+    }, (err) => {
+      console.warn('Error reading weekly_reports:', err);
+      setLoading(false);
+    });
+
+    const unsubVideos = onSnapshot(collection(db, 'platform_videos'), (snapshot) => {
+      const list = [];
+      snapshot.forEach(docSnap => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setVideoList(list);
+    }, (err) => {
+      console.warn('Error reading platform_videos:', err);
+    });
+
+    return () => {
+      unsubReports();
+      unsubVideos();
+    };
   }, []);
 
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6 font-sans relative z-10 text-white" dir="rtl">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-10">
         
         {/* Header Hero Banner */}
         <div className="bg-gradient-to-r from-slate-900/90 via-cyan-950/70 to-slate-900/90 backdrop-blur-2xl border border-cyan-500/30 rounded-3xl p-6 sm:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] border-t-2 border-t-cyan-400 text-center relative overflow-hidden">
@@ -26,46 +63,226 @@ export default function PlatformVideos() {
           </h1>
 
           <p className="text-xs sm:text-sm text-cyan-200 max-w-2xl mx-auto leading-relaxed">
-            استعرض هنا جميع الشروحات التوضيحية، استراتيجيات التحليل الذكي، وتوثيق النتائج السابقة لمنصة اتجاه.
+            استعرض التقرير الأسبوعي الشامل للسوق السعودي والأمريكي (PDF) والتحليلات الشاملة لنتائج منصة اتجاه.
           </p>
 
           <div className="mt-6 flex justify-center">
             <Link 
               to="/" 
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-cyan-500/30 text-cyan-300 font-bold text-xs transition"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-cyan-500/30 text-cyan-300 font-bold text-xs transition shadow-md"
             >
               <ArrowLeft size={16} /> العودة للرئيسية
             </Link>
           </div>
         </div>
 
-        {/* Placeholder Video Grid Container */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((item) => (
-            <div 
-              key={item}
-              className="bg-slate-950/80 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-5 shadow-xl hover:border-cyan-400/60 transition group flex flex-col justify-between"
-            >
-              <div className="relative aspect-video bg-slate-900 rounded-xl overflow-hidden border border-white/10 flex items-center justify-center mb-4 group-hover:border-cyan-500/40 transition">
-                <div className="w-14 h-14 rounded-full bg-cyan-500/20 border-2 border-cyan-400 text-cyan-300 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)] group-hover:scale-110 transition">
-                  <Play size={24} className="mr-0.5 text-cyan-300 fill-cyan-300/30" />
-                </div>
-                <span className="absolute bottom-2 left-2 text-[10px] font-mono font-bold bg-slate-950/80 px-2 py-0.5 rounded-md border border-white/10 text-cyan-300">
-                  عرض فيديو #{item}
+        {/* Section 1: Weekly PDF Reports (التقرير الأسبوعي 📄) */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 border-b border-cyan-500/20 pb-3">
+            <div className="p-2.5 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-300 shadow-md">
+              <FileText size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-amber-300 flex items-center gap-2">
+                <span>التقرير الأسبوعي 📄</span>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-400/30 text-amber-300">
+                  متزامن بالتاريخ والوقت
                 </span>
-              </div>
+              </h2>
+              <p className="text-xs text-slate-300 mt-0.5">
+                تقارير أسبوعية معتمدة ومحدثة دورياً للسوق السعودي والسوق الأمريكي بفرص ومؤشرات المنصة.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Card 1: Saudi Market Weekly Report */}
+            <div className="bg-gradient-to-br from-slate-950/90 via-emerald-950/30 to-slate-950/90 backdrop-blur-xl border border-emerald-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-emerald-400/60 transition group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
               <div>
-                <h3 className="font-bold text-sm text-white mb-1.5 flex items-center gap-1.5">
-                  <Video size={16} className="text-cyan-400 shrink-0" />
-                  <span>نتائج التحليل والاستراتيجيات #{item}</span>
-                </h3>
-                <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">
-                  معاينة وتوثيق حي لأداء المنصة والتحليلات الذكية السابقة.
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🇸🇦</span>
+                    <h3 className="text-lg font-extrabold text-emerald-300">التقرير الأسبوعي للسوق السعودي</h3>
+                  </div>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center gap-1">
+                    <ShieldCheck size={13} />
+                    <span>تقرير معتمد</span>
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  تقرير تحليلي رصين يشمل أهم حركة المؤشر العام (تاسي)، وأقوى صفقات ودعوم الأسهم السعودية.
                 </p>
+
+                {/* Upload Timestamp Display */}
+                <div className="bg-slate-900/80 rounded-2xl p-3.5 border border-emerald-500/20 mb-5 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-emerald-200">
+                    <Clock size={14} className="text-emerald-400 shrink-0" />
+                    <span className="font-semibold">تاريخ ووقت الرفع على الموقع:</span>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-emerald-300 pr-5 dir-rtl">
+                    {reports.saudi?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير جديد بعد')}
+                  </div>
+                  {reports.saudi?.uploadedBy && (
+                    <div className="text-[10px] text-slate-400 pr-5">
+                      تم الرفع بواسطة: <span className="text-emerald-200 font-semibold">{reports.saudi.uploadedBy}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div>
+                {reports.saudi?.pdfUrl ? (
+                  <a
+                    href={reports.saudi.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02]"
+                  >
+                    <Download size={16} />
+                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <ExternalLink size={14} className="opacity-80" />
+                  </a>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-500 font-bold text-xs cursor-not-allowed"
+                  >
+                    <span>📄 التقرير غير متاح حالياً</span>
+                  </button>
+                )}
               </div>
             </div>
-          ))}
+
+            {/* Card 2: US Market Weekly Report */}
+            <div className="bg-gradient-to-br from-slate-950/90 via-blue-950/30 to-slate-950/90 backdrop-blur-xl border border-blue-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-blue-400/60 transition group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🇺🇸</span>
+                    <h3 className="text-lg font-extrabold text-blue-300">التقرير الأسبوعي للسوق الأمريكي</h3>
+                  </div>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 flex items-center gap-1">
+                    <ShieldCheck size={13} />
+                    <span>تقرير معتمد</span>
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  تحليل مفصل لأداء المؤشرات الأمريكية (S&P 500, Nasdaq) وأقوى صفقات الأسهم والعقود الأمريكية.
+                </p>
+
+                {/* Upload Timestamp Display */}
+                <div className="bg-slate-900/80 rounded-2xl p-3.5 border border-blue-500/20 mb-5 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-blue-200">
+                    <Clock size={14} className="text-blue-400 shrink-0" />
+                    <span className="font-semibold">تاريخ ووقت الرفع على الموقع:</span>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-blue-300 pr-5 dir-rtl">
+                    {reports.us?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير جديد بعد')}
+                  </div>
+                  {reports.us?.uploadedBy && (
+                    <div className="text-[10px] text-slate-400 pr-5">
+                      تم الرفع بواسطة: <span className="text-blue-200 font-semibold">{reports.us.uploadedBy}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div>
+                {reports.us?.pdfUrl ? (
+                  <a
+                    href={reports.us.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02]"
+                  >
+                    <Download size={16} />
+                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <ExternalLink size={14} className="opacity-80" />
+                  </a>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-500 font-bold text-xs cursor-not-allowed"
+                  >
+                    <span>📄 التقرير غير متاح حالياً</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Section 2: Videos Grid */}
+        <div className="space-y-4 pt-4">
+          <div className="flex items-center gap-3 border-b border-cyan-500/20 pb-3">
+            <div className="p-2.5 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 shadow-md">
+              <Video size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-cyan-300">شروحات المنصة وتوثيق النتائج 🎥</h2>
+              <p className="text-xs text-slate-300 mt-0.5">فيديوهات توضيحية لآلية العمل وتوثيق صفقات اتجاه الناجحة.</p>
+            </div>
+          </div>
+
+          {videoList.length === 0 ? (
+            <div className="bg-slate-950/80 backdrop-blur-xl border border-cyan-500/30 rounded-3xl p-10 text-center space-y-3">
+              <div className="w-16 h-16 mx-auto rounded-full bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-cyan-300">
+                <Video size={32} />
+              </div>
+              <h3 className="text-base font-bold text-cyan-200">لا توجد فيديوهات مرفوعة حتى الآن 🎥</h3>
+              <p className="text-xs text-slate-400">سيتم إضافة فيديوهات جديدة وشروحات من قِبل إدارة المنصة قريباً.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {videoList.map((video) => (
+                <div 
+                  key={video.id}
+                  className="bg-slate-950/80 backdrop-blur-xl border border-cyan-500/30 rounded-3xl p-5 shadow-xl hover:border-cyan-400/60 transition group flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden border border-white/10 mb-4 shadow-md group-hover:border-cyan-500/40 transition">
+                      <video 
+                        controls 
+                        src={video.videoUrl} 
+                        className="w-full h-full object-cover"
+                        preload="metadata"
+                      />
+                      <span className="absolute top-2 right-2 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-950/90 border border-cyan-400/40 text-cyan-300 shadow-md">
+                        {video.market === 'saudi' ? '🇸🇦 السوق السعودي' : '🇺🇸 السوق الأمريكي'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="font-bold text-sm text-white mb-1.5 flex items-center gap-1.5">
+                        <Video size={16} className="text-cyan-400 shrink-0" />
+                        <span>{video.title}</span>
+                      </h3>
+                      {video.description && (
+                        <p className="text-xs text-slate-300 leading-relaxed mb-3">
+                          {video.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-cyan-500/20 text-[10px] text-slate-400 flex justify-between items-center">
+                    <span>تاريخ النشر: {video.uploadedAtFormatted || 'مؤخراً'}</span>
+                    {video.uploadedBy && <span className="text-cyan-300 font-semibold">{video.uploadedBy}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

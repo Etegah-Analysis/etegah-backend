@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import React, { useState, useEffect, useRef, useMemo, useCallback, startTransition } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Settings, Monitor, Users, UserCheck, Clock, ArrowRight, UserPlus, X, Trash2, Edit, Edit3, Shield, Play, Pause, BarChart3, Globe, MessageSquare, Search, FileSpreadsheet, Download, Upload, Share2, FileText, CheckCircle, CheckSquare, Calendar, MessageCircle, FilePlus, Tag, Filter, UserCheck2, MessageSquarePlus, LogOut, ArrowDownLeft, UserMinus, RefreshCw, ArrowUpDown, Award, CreditCard, Save, Copy, Mail, Paperclip, Send, Inbox, Star, Reply, Eye, Sparkles, PhoneCall, Phone, Bell, ChevronRight, User, CheckCircle2, CheckCheck, Coffee, ShoppingCart, ExternalLink, ImageIcon } from 'lucide-react';
+import { Plus, Settings, Monitor, Users, UserCheck, Clock, ArrowRight, UserPlus, X, Trash2, Edit, Edit3, Shield, Play, Pause, BarChart3, Globe, MessageSquare, Search, FileSpreadsheet, Download, Upload, Share2, FileText, CheckCircle, CheckSquare, Calendar, MessageCircle, FilePlus, Tag, Filter, UserCheck2, MessageSquarePlus, LogOut, ArrowDownLeft, UserMinus, RefreshCw, ArrowUpDown, Award, CreditCard, Save, Copy, Mail, Paperclip, Send, Inbox, Star, Reply, Eye, Sparkles, PhoneCall, Phone, Bell, ChevronRight, User, CheckCircle2, CheckCheck, Coffee, ShoppingCart, ExternalLink, ImageIcon, Video } from 'lucide-react';
 import { auth, db, collection, onSnapshot, setDoc, doc, secondaryAuth, createUserWithEmailAndPassword, deleteDoc, updateDoc, serverTimestamp, arrayUnion, getDoc, writeBatch, query, orderBy, addDoc, where, storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword, updatePassword, updateEmail } from 'firebase/auth';
@@ -444,11 +444,20 @@ const Dashboard = () => {
   const mainContainerRef = useRef(null);
   const scrollTimeoutRef = useRef(null);
 
-  const [customers, setCustomers] = useState([]);
-  const [leadsCrm, setLeadsCrm] = useState([]);
-  const [employeeLeads, setEmployeeLeads] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [visitors, setVisitors] = useState([]);
+  const getInitialCache = (key, fallback = []) => {
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  };
+
+  const [customers, setCustomers] = useState(() => getInitialCache('cache_customers', []));
+  const [leadsCrm, setLeadsCrm] = useState(() => getInitialCache('cache_leadsCrm', []));
+  const [employeeLeads, setEmployeeLeads] = useState(() => getInitialCache('cache_employeeLeads', []));
+  const [employees, setEmployees] = useState(() => getInitialCache('cache_employees', []));
+  const [visitors, setVisitors] = useState(() => getInitialCache('cache_visitors', []));
   const [recycleBin, setRecycleBin] = useState([]);
   const [rbFilter, setRbFilter] = useState('all');
   const [templateMessages, setTemplateMessages] = useState([]);
@@ -517,6 +526,11 @@ const Dashboard = () => {
   const [currentPageTeamTracking, setCurrentPageTeamTracking] = useState(1);
   const [teamTrackingEmpFilter, setTeamTrackingEmpFilter] = useState('all');
   const [selectedTeamTrackingLeads, setSelectedTeamTrackingLeads] = useState([]);
+
+  // Website Visitors (OTP & WhatsApp) Pagination & Filters State (10 per page)
+  const [visitorCurrentPage, setVisitorCurrentPage] = useState(1);
+  const [visitorEmpFilter, setVisitorEmpFilter] = useState('all');
+  const [visitorStatusFilter, setVisitorStatusFilter] = useState('all');
 
   // Subscribed Clients Tab & Details Modal State
   const [currentPageSubscribed, setCurrentPageSubscribed] = useState(1);
@@ -654,6 +668,7 @@ const Dashboard = () => {
 
   // Call Performance Analytics States
   const [callLogs, setCallLogs] = useState([]);
+  const [incomingInternalCall, setIncomingInternalCall] = useState(null);
   const [isCallsAnalysisModalOpen, setIsCallsAnalysisModalOpen] = useState(false);
   const [callsAnalysisModalMode, setCallsAnalysisModalMode] = useState('auto'); // 'auto', 'personal', 'all'
   const [callsDateRangeFilter, setCallsDateRangeFilter] = useState('all'); // 'all', 'today', 'yesterday', 'week', 'month', 'custom'
@@ -687,8 +702,18 @@ const Dashboard = () => {
   const [mailFixedSubscriptionSummary, setMailFixedSubscriptionSummary] = useState('');
 
   // --- MARKET SIGNALS & RECOMMENDATIONS STATE (SAUDI & US) (v2.23) ---
-  const [saudiRecommendations, setSaudiRecommendations] = useState([]);
-  const [usRecommendations, setUsRecommendations] = useState([]);
+  const [saudiRecommendations, setSaudiRecommendations] = useState(() => {
+    try {
+      const cached = localStorage.getItem('etegah_cached_saudi_recs');
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) { return []; }
+  });
+  const [usRecommendations, setUsRecommendations] = useState(() => {
+    try {
+      const cached = localStorage.getItem('etegah_cached_us_recs');
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) { return []; }
+  });
   const [saudiSignalsFilter, setSaudiSignalsFilter] = useState('all');
   const [saudiSignalsSearch, setSaudiSignalsSearch] = useState('');
   const [usSignalsMarketFilter, setUsSignalsMarketFilter] = useState('all'); // 'all', 'stocks', 'options'
@@ -2215,6 +2240,7 @@ const Dashboard = () => {
       const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       data.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
       setCustomers(data);
+      try { localStorage.setItem('cache_customers', JSON.stringify(data.slice(0, 500))); } catch(e){}
     });
 
     const leadsCrmUnsub = onSnapshot(collection(db, 'leads_crm'), (snapshot) => {
@@ -2227,6 +2253,7 @@ const Dashboard = () => {
       });
       data.sort((a, b) => b._ts - a._ts);
       setLeadsCrm(data);
+      try { localStorage.setItem('cache_leadsCrm', JSON.stringify(data.slice(0, 500))); } catch(e){}
     }, (error) => {
       console.error("Error fetching leads_crm:", error);
       toast.error("خطأ في جلب بيانات Leads CRM: " + error.message);
@@ -3078,6 +3105,29 @@ const Dashboard = () => {
     requestSystemNotificationPermission();
   }, []);
 
+  // Real-time listener for Website Client Internal Ringing Calls (v2.26)
+  useEffect(() => {
+    const qCalls = query(collection(db, 'internal_calls'), where('status', '==', 'ringing'));
+    const unsubCalls = onSnapshot(qCalls, (snapshot) => {
+      if (!snapshot.empty) {
+        const docSnap = snapshot.docs[0];
+        const callData = { id: docSnap.id, ...docSnap.data() };
+        setIncomingInternalCall(callData);
+        playNotificationChime();
+        triggerNativeNotification({
+          title: '📞 اتصال داخلي وارد من الموقع!',
+          body: `اتصال وارد من: ${callData.callerName || callData.clientName || 'عميل جديد'}`,
+          icon: '/logo.jpg',
+          url: '/dashboard'
+        });
+      } else {
+        setIncomingInternalCall(null);
+      }
+    }, (err) => console.warn('internal_calls listener error:', err));
+
+    return () => unsubCalls();
+  }, []);
+
   // تحديث شارة التبويب (Favicon) وإطلاق إشعار نظام حقيقي على شاشة اللابتوب والموبايل بصوت التنبيه
   useEffect(() => {
     setGlobalNotificationAlert(totalAllNotificationsCount, 'CRM WhatsApp Etegah');
@@ -3356,6 +3406,15 @@ const Dashboard = () => {
         matchesScope = (c.assignedToUid === currentUid || c.addedByUid === currentUid || (currentMail && c.assignedTo?.toLowerCase() === currentMail));
       } else if (selectedEmpFilter === 'admin' || selectedEmpFilter === 'unassigned') {
         matchesScope = isLeadWithAdmin(c);
+      } else if (selectedEmpFilter === 'website_otp') {
+        matchesScope = (
+          c.addedBy === 'website_otp' || 
+          c.source === 'website_otp' || 
+          c.source === 'website' || 
+          c.status === 'website_visitor' || 
+          c.source?.includes('موقع') || 
+          c.addedBy === 'WhatsApp Webhook'
+        );
       } else if (selectedEmpFilter === 'all') {
         matchesScope = isLeadAssignedToEmployee(c);
       } else if (selectedEmpFilter) {
@@ -8140,7 +8199,6 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               <th>حالة التوصية</th>
               <th>${isSaudi ? 'المكسب (ر.س)' : 'المكسب ($)'}</th>
               <th>نسبة الإنجاز %</th>
-              <th>وقت الرفع</th>
             </tr>
           </thead>
           <tbody>
@@ -8158,7 +8216,6 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                   <td><span class="badge ${badgeClass}">${statusLbl}</span></td>
                   <td style="font-weight:bold; font-family:monospace; color:${(isSaudi ? calculateSaudiGainValue(sig) : calculateUsGainValue(sig)) >= 0 ? '#047857' : '#e11d48'};">${(() => { const g = isSaudi ? calculateSaudiGainValue(sig) : calculateUsGainValue(sig); return g !== null ? (g >= 0 ? '+' + g.toFixed(2) : g.toFixed(2)) + (isSaudi ? ' ر.س' : ' $') : '-'; })()}</td>
                   <td style="font-weight:bold; color:#047857;">${(() => { const p = isSaudi ? calculateSaudiPercentage(sig) : calculateUsPercentage(sig); return p !== null ? (p >= 0 ? '+' + p.toFixed(2) + '%' : p.toFixed(2) + '%') : '-'; })()}</td>
-                  <td>${sig.uploadedAtFormatted || '-'}</td>
                 </tr>
               `;
             }).join('')}
@@ -8180,6 +8237,112 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
       printWindow.print();
     }, 400);
   };
+
+  // --- WEEKLY PDF REPORT UPLOADER (v2.26) ---
+  const handleUploadWeeklyPdf = (marketType = 'saudi') => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,application/pdf';
+    input.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+        toast.error('يرجى اختيار ملف PDF فقط 📄');
+        return;
+      }
+      const loadingToast = toast.loading('جاري رفع التقرير الأسبوعي (PDF)... ⏳');
+      try {
+        let pdfUrl = '';
+        if (storage) {
+          try {
+            const storageRef = ref(storage, `weekly_reports/${marketType}_${Date.now()}_${file.name}`);
+            await uploadBytes(storageRef, file);
+            pdfUrl = await getDownloadURL(storageRef);
+          } catch (stErr) {
+            console.warn('Storage upload error, reading as base64 fallback:', stErr);
+          }
+        }
+        if (!pdfUrl) {
+          pdfUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (err) => reject(err);
+            reader.readAsDataURL(file);
+          });
+        }
+        const reportData = {
+          market: marketType,
+          title: marketType === 'saudi' ? 'التقرير الأسبوعي للسوق السعودي' : 'التقرير الأسبوعي للسوق الأمريكي',
+          fileName: file.name,
+          pdfUrl,
+          createdAt: serverTimestamp(),
+          uploadedAtFormatted: new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          uploadedBy: currentEmpUser?.name || 'الإدارة'
+        };
+        await setDoc(doc(db, 'weekly_reports', marketType === 'saudi' ? 'saudi_latest' : 'us_latest'), reportData, { merge: true });
+        await addDoc(collection(db, 'weekly_reports_history'), reportData);
+        toast.dismiss(loadingToast);
+        toast.success(`تم رفع ${reportData.title} (PDF) بنجاح 📄✨`);
+      } catch (err) {
+        console.error('Error uploading weekly PDF:', err);
+        toast.dismiss(loadingToast);
+        toast.error('حدث خطأ أثناء رفع التقرير الأسبوعي ❌');
+      }
+    };
+    input.click();
+  };
+
+  // --- DBF FILE UPLOADER (v2.26) ---
+  const handleUploadDbf = (marketType = 'saudi') => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.dbf,.csv,.xlsx';
+    input.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const loadingToast = toast.loading(`جاري رفع ملف DBF للسوق ${marketType === 'saudi' ? 'السعودي' : 'الأمريكي'}... ⏳`);
+      try {
+        let dbfUrl = '';
+        if (storage) {
+          try {
+            const storageRef = ref(storage, `dbf_files/${marketType}_${Date.now()}_${file.name}`);
+            await uploadBytes(storageRef, file);
+            dbfUrl = await getDownloadURL(storageRef);
+          } catch (stErr) {
+            console.warn('Storage upload error, reading as base64 fallback:', stErr);
+          }
+        }
+        if (!dbfUrl) {
+          dbfUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (err) => reject(err);
+            reader.readAsDataURL(file);
+          });
+        }
+        const dbfData = {
+          market: marketType,
+          title: marketType === 'saudi' ? 'ملف DBF للسوق السعودي' : 'ملف DBF للسوق الأمريكي',
+          fileName: file.name,
+          dbfUrl,
+          createdAt: serverTimestamp(),
+          uploadedAtFormatted: new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          uploadedBy: currentEmpUser?.name || 'الإدارة'
+        };
+        await setDoc(doc(db, 'dbf_files', marketType === 'saudi' ? 'saudi_latest' : 'us_latest'), dbfData, { merge: true });
+        await addDoc(collection(db, 'dbf_files_history'), dbfData);
+        toast.dismiss(loadingToast);
+        toast.success(`تم رفع ${dbfData.title} بنجاح 🗄️✨`);
+      } catch (err) {
+        console.error('Error uploading DBF file:', err);
+        toast.dismiss(loadingToast);
+        toast.error('حدث خطأ أثناء رفع ملف DBF ❌');
+      }
+    };
+    input.click();
+  };
+
+
 
   const handleOpenAddBuffetItem = (item = null) => {
     if (item) {
@@ -8505,6 +8668,151 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
     } catch (err) {
       console.error(err);
       toast.error('حدث خطأ أثناء الحذف');
+    }
+  };
+
+  const handleExportOrPublishPdf = async (market) => {
+    const isSaudi = market === 'saudi';
+    const marketTitle = isSaudi ? 'السوق السعودي 🇸🇦' : 'السوق الأمريكي 🇺🇸';
+
+    const choice = window.confirm(
+      `اختر الإجراء المطلوب لتقرير ${marketTitle}:\n\n` +
+      `• اضغط (موافق OK) لتأكيد وتحويل/رفع التقرير مباشرة لموقع المنصة وتنبيه العملاء فوراً 🚀✨\n` +
+      `• اضغط (إلغاء Cancel) لتحميل وطباعة التقرير كملف PDF محلياً بـ لوجو الشركة 📄`
+    );
+
+    if (!choice) {
+      if (typeof handleExportSignalsPdf === 'function') {
+        handleExportSignalsPdf(market);
+      } else {
+        window.print();
+      }
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/pdf,.pdf';
+    input.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const toastId = toast.loading(`جاري رفع وتحويل تقرير ${marketTitle} لموقع المنصة... ⏳`);
+      try {
+        const storagePath = `weekly_pdf_reports/weekly_report_${market}_${Date.now()}.pdf`;
+        const fileRef = ref(storage, storagePath);
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
+
+        const now = new Date();
+        const formattedNow = now.toLocaleDateString('ar-EG') + ' • ' + now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        const userRole = isAdmin ? '👑 الإدارة' : (currentEmpUser?.name || 'محلل المنصة');
+
+        const docId = isSaudi ? 'saudi_latest' : 'us_latest';
+        const reportPayload = {
+          market: market,
+          pdfUrl: downloadUrl,
+          uploadedAt: serverTimestamp(),
+          uploadedAtFormatted: formattedNow,
+          uploadedBy: userRole,
+          fileName: file.name
+        };
+
+        await setDoc(doc(db, 'weekly_reports', docId), reportPayload, { merge: true });
+
+        // Broadcast notification to clients
+        await addDoc(collection(db, 'platform_notifications'), {
+          title: isSaudi ? '📄 تقرير أسبوعي جديد للسوق السعودي' : '📄 تقرير أسبوعي جديد للسوق الأمريكي',
+          body: `تم رفع وتحديث التقرير الأسبوعي الشامل لـ ${marketTitle} على موقع المنصة، انقر للمعاينة والتحميل`,
+          type: 'pdf_report',
+          market: market,
+          url: '/platform-videos',
+          createdAt: serverTimestamp(),
+          timestampMillis: Date.now()
+        });
+
+        toast.success(`تم نشر وتحويل تقرير ${marketTitle} على موقع المنصة وإرسال التنبيه للعملاء بنجاح 🚀✨`, { id: toastId, duration: 6000 });
+      } catch (err) {
+        console.error('Error publishing weekly PDF report:', err);
+        toast.error('حدث خطأ أثناء الرفع والتحويل لموقع المنصة: ' + (err.message || ''), { id: toastId });
+      }
+    };
+    input.click();
+  };
+
+  // --- PLATFORM VIDEO UPLOADER HANDLERS (v2.26) ---
+  const [isUploadVideoModalOpen, setIsUploadVideoModalOpen] = useState(false);
+  const [videoMarket, setVideoMarket] = useState('saudi');
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoDescription, setVideoDescription] = useState('');
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+
+  const handleOpenUploadVideoModal = (market = 'saudi') => {
+    setVideoMarket(market);
+    setVideoTitle('');
+    setVideoDescription('');
+    setVideoFile(null);
+    setIsUploadVideoModalOpen(true);
+  };
+
+  const handleSavePlatformVideo = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!videoTitle.trim()) {
+      toast.error('يرجى كتابة عنوان الفيديو 🎥');
+      return;
+    }
+    if (!videoFile) {
+      toast.error('يرجى اختيار ملف الفيديو أولاً 🎬');
+      return;
+    }
+
+    setVideoUploading(true);
+    const toastId = toast.loading('جاري رفع الفيديو إلى السيرفر والمنصة... ⏳');
+    try {
+      const storagePath = `platform_videos/video_${Date.now()}_${videoFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const fileRef = ref(storage, storagePath);
+      await uploadBytes(fileRef, videoFile);
+      const downloadUrl = await getDownloadURL(fileRef);
+
+      const now = new Date();
+      const formattedNow = now.toLocaleDateString('ar-EG') + ' • ' + now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+      const userRole = isAdmin ? '👑 الإدارة' : (currentEmpUser?.name || 'محلل المنصة');
+
+      const videoData = {
+        title: videoTitle.trim(),
+        market: videoMarket,
+        description: videoDescription.trim(),
+        videoUrl: downloadUrl,
+        uploadedAt: serverTimestamp(),
+        uploadedAtFormatted: formattedNow,
+        uploadedBy: userRole,
+        fileName: videoFile.name
+      };
+
+      await addDoc(collection(db, 'platform_videos'), videoData);
+
+      // Broadcast client notification
+      await addDoc(collection(db, 'platform_notifications'), {
+        title: '🎥 فيديو تحليل واستراتيجيات جديد بالمنصة',
+        body: `تم نشر فيديو جديد: (${videoTitle.trim()}) للسوق ${videoMarket === 'saudi' ? 'السعودي 🇸🇦' : 'الأمريكي 🇺🇸'}`,
+        type: 'platform_video',
+        market: videoMarket,
+        url: '/platform-videos',
+        createdAt: serverTimestamp(),
+        timestampMillis: Date.now()
+      }).catch(console.error);
+
+      toast.success('تم رفع ونشر الفيديو على المنصة وإرسال التنبيه للعملاء بنجاح 🎥✨', { id: toastId, duration: 5000 });
+      setIsUploadVideoModalOpen(false);
+      setVideoTitle('');
+      setVideoDescription('');
+      setVideoFile(null);
+    } catch (err) {
+      console.error('Error uploading video:', err);
+      toast.error('حدث خطأ أثناء رفع الفيديو: ' + (err.message || ''), { id: toastId });
+    } finally {
+      setVideoUploading(false);
     }
   };
 
@@ -11574,24 +11882,85 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               return (
                 <div className="px-6 py-3.5 bg-gradient-to-r from-purple-50/70 via-indigo-50/40 to-white border-b flex flex-wrap justify-between items-center gap-3">
                   <div className="flex items-center gap-2.5 flex-wrap flex-1 min-w-[200px]">
-                    {/* Employee Filter (Admin & Coordinator) - 3D Glassmorphic Dark-Pill */}
-                    {(isAdmin || isCoordinator) && (
+                    {/* Employee & Team Filter (Admin, Coordinator, Leader) - English 3D Glassmorphic Dark-Pill */}
+                    {(isAdmin || isCoordinator || isLeader) && (
                       <div className="relative">
                         <select
                           value={selectedEmpFilter}
                           onChange={(e) => setSelectedEmpFilter(e.target.value)}
                           className="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 text-white rounded-full py-2 px-4 pl-8 text-xs font-black focus:outline-none shadow-[0_4px_14px_rgba(112,26,117,0.35)] border border-purple-400/40 hover:border-purple-300 hover:shadow-[0_6px_18px_rgba(112,26,117,0.45)] transition-all cursor-pointer appearance-none"
                         >
-                          <option value="admin" className="bg-purple-950 text-white">👑 الإدارة ({leadsWithAdminCount.toLocaleString()})</option>
-                          <option value="all" className="bg-purple-950 text-white">👥 جميع الموظفين ({leadsWithEmployeesCount.toLocaleString()})</option>
-                          {assignableEmployees.map(emp => {
-                            const count = employeeLeadCounts[emp.uid] || 0;
-                            return (
-                              <option key={emp.uid} value={emp.uid} className="bg-purple-950 text-white">
-                                👤 {emp.name || emp.username} ({count.toLocaleString()} عميل)
-                              </option>
-                            );
-                          })}
+                          <option value="admin" className="bg-purple-950 text-white">👑 Admin ({leadsWithAdminCount.toLocaleString()} Leads)</option>
+                          <option value="all" className="bg-purple-950 text-white">👥 All Employees ({leadsWithEmployeesCount.toLocaleString()} Leads)</option>
+                          <option value="website_otp" className="bg-purple-950 text-white">🌐 Website Leads ({leadsCrm.filter(c => c.addedBy === 'WhatsApp Webhook' || c.addedBy === 'website_otp' || c.source === 'website' || c.source === 'website_otp' || c.source?.includes('موقع')).length.toLocaleString()} Leads)</option>
+
+                          {isLeader && !isAdmin ? (
+                            <>
+                              {(() => {
+                                const myLeaderEmp = currentEmpUser || employees.find(e => e.uid === currentUser?.uid);
+                                const myLeaderUid = myLeaderEmp?.uid;
+                                const myTeamMembers = employees.filter(m => m.leaderUid === myLeaderUid);
+                                const leaderOwnCount = employeeLeadCounts[myLeaderUid] || 0;
+                                const teamTotalCount = leaderOwnCount + myTeamMembers.reduce((acc, m) => acc + (employeeLeadCounts[m.uid] || 0), 0);
+
+                                return (
+                                  <optgroup 
+                                    label={`👑 My Team (Total: ${teamTotalCount.toLocaleString()} Leads)`}
+                                    className="bg-purple-950 text-amber-300 font-bold"
+                                  >
+                                    <option value={myLeaderUid} className="bg-purple-950 text-white">
+                                      👑 Leader: {myLeaderEmp?.username || myLeaderEmp?.name} (Personal: {leaderOwnCount.toLocaleString()} Leads)
+                                    </option>
+                                    {myTeamMembers.map(member => {
+                                      const count = employeeLeadCounts[member.uid] || 0;
+                                      return (
+                                        <option key={member.uid} value={member.uid} className="bg-purple-950 text-white">
+                                          👤 Agent: {member.username || member.name} ({count.toLocaleString()} Leads)
+                                        </option>
+                                      );
+                                    })}
+                                  </optgroup>
+                                );
+                              })()}
+                            </>
+                          ) : (
+                            <>
+                              {employees.filter(e => e.jobTitle === 'Leader' || e.role === 'leader').map(leader => {
+                                const teamMembers = employees.filter(m => m.leaderUid === leader.uid);
+                                const leaderOwnCount = employeeLeadCounts[leader.uid] || 0;
+                                const teamTotalCount = leaderOwnCount + teamMembers.reduce((acc, m) => acc + (employeeLeadCounts[m.uid] || 0), 0);
+
+                                return (
+                                  <optgroup 
+                                    key={leader.uid} 
+                                    label={`👑 Team Leader: ${leader.username || leader.name || 'Leader'} (Total: ${teamTotalCount.toLocaleString()} Leads)`}
+                                    className="bg-purple-950 text-amber-300 font-bold"
+                                  >
+                                    <option value={leader.uid} className="bg-purple-950 text-white">
+                                      👑 Leader: {leader.username || leader.name} (Personal: {leaderOwnCount.toLocaleString()} Leads)
+                                    </option>
+                                    {teamMembers.map(member => {
+                                      const count = employeeLeadCounts[member.uid] || 0;
+                                      return (
+                                        <option key={member.uid} value={member.uid} className="bg-purple-950 text-white">
+                                          👤 Agent: {member.username || member.name} ({count.toLocaleString()} Leads)
+                                        </option>
+                                      );
+                                    })}
+                                  </optgroup>
+                                );
+                              })}
+
+                              {employees.filter(e => e.role !== 'admin' && e.jobTitle !== 'Leader' && e.role !== 'leader' && !e.leaderUid).map(emp => {
+                                const count = employeeLeadCounts[emp.uid] || 0;
+                                return (
+                                  <option key={emp.uid} value={emp.uid} className="bg-purple-950 text-white">
+                                    👤 {emp.jobTitle === 'Coordinator' ? '🏢 Coordinator' : '👤 Agent'}: {emp.username || emp.name} ({count.toLocaleString()} Leads)
+                                  </option>
+                                );
+                              })}
+                            </>
+                          )}
                         </select>
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-purple-300 text-[10px] font-bold">
                           ▼
@@ -13572,14 +13941,34 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
 
                 <div className="flex items-center gap-2 flex-wrap">
                   {(isAdmin || hasPermission(currentEmpUser, 'canExportSaudiStocks')) && (
-                  <button 
-                    onClick={() => handleExportSignalsPdf('saudi')}
-                    className="bg-gradient-to-r from-rose-700 to-red-700 hover:from-rose-600 hover:to-red-600 text-white px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md cursor-pointer"
-                    title="تحميل وطباعة تقرير التوصيات كـ PDF بلوجو الشركة"
-                  >
-                    <Download size={14} />
-                    <span>تحميل تقرير PDF (بلوجو الشركة) 📄</span>
-                  </button>
+                    <>
+                      <button 
+                        onClick={() => handleOpenUploadVideoModal('saudi')}
+                        className="bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md cursor-pointer border border-purple-400/30"
+                        title="رفع فيديو توضيحي واستراتيجيات للمنصة للعرض على الموقع"
+                      >
+                        <Video size={14} />
+                        <span>رفع فيديو للمنصة 🎥</span>
+                      </button>
+
+                      <button 
+                        onClick={() => handleUploadDbf('saudi')}
+                        className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md cursor-pointer border border-teal-400/30"
+                        title="رفع ملف DBF لصفحة التوصيات بالمنصة"
+                      >
+                        <Upload size={14} />
+                        <span>رفع ملف DBF 🗄️</span>
+                      </button>
+
+                      <button 
+                        onClick={() => handleExportOrPublishPdf('saudi')}
+                        className="bg-gradient-to-r from-rose-700 via-red-600 to-amber-600 hover:from-rose-600 hover:to-amber-500 text-white px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md cursor-pointer border border-rose-400/30"
+                        title="تحميل أو طباعة أو تحويل لموقع المنصة PDF"
+                      >
+                        <Download size={14} />
+                        <span>تحميل / طباعة / تحويل لموقع المنصة PDF 📄</span>
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -14022,14 +14411,36 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <button 
-                    onClick={() => handleExportSignalsPdf('us')}
-                    className="bg-gradient-to-r from-rose-700 to-red-700 hover:from-rose-600 hover:to-red-600 text-white px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md cursor-pointer"
-                    title="تحميل وطباعة تقرير التوصيات كـ PDF بلوجو الشركة"
-                  >
-                    <Download size={14} />
-                    <span>تحميل تقرير PDF (بلوجو الشركة) 📄</span>
-                  </button>
+                  {(isAdmin || hasPermission(currentEmpUser, 'canExportUsStocks')) && (
+                    <>
+                      <button 
+                        onClick={() => handleOpenUploadVideoModal('us')}
+                        className="bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md cursor-pointer border border-purple-400/30"
+                        title="رفع فيديو توضيحي واستراتيجيات للمنصة للعرض على الموقع"
+                      >
+                        <Video size={14} />
+                        <span>رفع فيديو للمنصة 🎥</span>
+                      </button>
+
+                      <button 
+                        onClick={() => handleUploadDbf('us')}
+                        className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md cursor-pointer border border-teal-400/30"
+                        title="رفع ملف DBF لصفحة التوصيات بالمنصة"
+                      >
+                        <Upload size={14} />
+                        <span>رفع ملف DBF 🗄️</span>
+                      </button>
+
+                      <button 
+                        onClick={() => handleExportOrPublishPdf('us')}
+                        className="bg-gradient-to-r from-rose-700 via-red-600 to-amber-600 hover:from-rose-600 hover:to-amber-500 text-white px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-md cursor-pointer border border-rose-400/30"
+                        title="تحميل أو طباعة أو تحويل لموقع المنصة PDF"
+                      >
+                        <Download size={14} />
+                        <span>تحميل / طباعة / تحويل لموقع المنصة PDF 📄</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -15419,6 +15830,8 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     if (c.status !== 'unassigned' && c.assignedTo) return false;
                   } else if (selectedEmpFilter === 'admin') {
                     if (c.assignedToUid && c.assignedToUid !== 'admin' && !isAdminIdentifier(c.assignedTo)) return false;
+                  } else if (selectedEmpFilter === 'website_otp') {
+                    if (c.addedBy !== 'website_otp' && c.source !== 'website_otp' && c.source !== 'website' && c.status !== 'website_visitor' && !c.source?.includes('موقع') && c.addedBy !== 'WhatsApp Webhook') return false;
                   } else {
                     if (c.assignedToUid !== selectedEmpFilter && (c.assignedTo !== targetEmp?.email && c.assignedTo?.toLowerCase() !== targetEmpMail)) return false;
                   }
@@ -16233,8 +16646,39 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     )}
                     <th className="p-4 font-extrabold text-amber-300 text-xs">الاسم ورقم الهاتف</th>
                     <th className="p-4 font-extrabold text-amber-300 text-xs">المصدر</th>
-                    <th className="p-4 font-extrabold text-amber-300 text-xs">حالة المتابعة</th>
-                    <th className="p-4 font-extrabold text-amber-300 text-xs text-center min-w-[230px]">الموظف المسؤول</th>
+                    <th className="p-4 font-extrabold text-amber-300 text-xs">
+                      <div className="flex flex-col gap-1">
+                        <span>حالة المتابعة</span>
+                        <select
+                          value={visitorStatusFilter}
+                          onChange={(e) => { setVisitorStatusFilter(e.target.value); setVisitorCurrentPage(1); }}
+                          className="bg-slate-800 text-amber-300 border border-purple-400/40 rounded-lg text-[11px] px-2 py-0.5 font-bold focus:outline-none cursor-pointer"
+                        >
+                          <option value="all">🎯 جميع الحالات</option>
+                          <option value="unassigned">⏳ في الانتظار (غير مسند)</option>
+                          <option value="website_visitor">🌐 مسجل OTP</option>
+                          <option value="assigned">✓ مستلمة (مسند)</option>
+                        </select>
+                      </div>
+                    </th>
+                    <th className="p-4 font-extrabold text-amber-300 text-xs text-center min-w-[230px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <span>الموظف المسؤول</span>
+                        <select
+                          value={visitorEmpFilter}
+                          onChange={(e) => { setVisitorEmpFilter(e.target.value); setVisitorCurrentPage(1); }}
+                          className="bg-slate-800 text-amber-300 border border-purple-400/40 rounded-lg text-[11px] px-2 py-0.5 font-bold focus:outline-none cursor-pointer"
+                        >
+                          <option value="all">👥 جميع الموظفين</option>
+                          <option value="admin">👑 الإدارة</option>
+                          {employees.filter(e => e.role !== 'admin' && e.jobTitle !== 'Coordinator').map(emp => (
+                            <option key={emp.uid} value={emp.uid}>
+                              👤 {emp.name || emp.username}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </th>
                     <th 
                       className="p-4 font-extrabold text-amber-300 text-xs cursor-pointer hover:bg-white/5 transition select-none"
                       onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
@@ -16294,20 +16738,51 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       }))
                     ].filter(v => {
                       const search = tableSearch.trim() || dashboardSearch.trim();
-                      if (!search) return true;
-                      const term = search.toLowerCase();
-                      return v.name?.toLowerCase().includes(term) || v.phone?.includes(term) || v.email?.toLowerCase().includes(term);
+                      if (search) {
+                        const term = search.toLowerCase();
+                        const match = v.name?.toLowerCase().includes(term) || v.phone?.includes(term) || v.email?.toLowerCase().includes(term);
+                        if (!match) return false;
+                      }
+
+                      if (visitorEmpFilter !== 'all') {
+                        if (visitorEmpFilter === 'admin') {
+                          if (v.assignedToUid !== 'admin' && v.assignedTo !== 'admin' && v.assignedTo !== 'الإدارة') return false;
+                        } else {
+                          const targetEmp = employees.find(e => e.uid === visitorEmpFilter);
+                          const empMail = targetEmp?.email?.toLowerCase();
+                          if (v.assignedToUid !== visitorEmpFilter && (empMail && v.assignedTo?.toLowerCase() !== empMail)) return false;
+                        }
+                      }
+
+                      if (visitorStatusFilter !== 'all') {
+                        if (visitorStatusFilter === 'unassigned') {
+                          if (v.status !== 'unassigned' && v.crmStatus !== 'unassigned') return false;
+                        } else if (visitorStatusFilter === 'website_visitor') {
+                          if (v.status !== 'website_visitor') return false;
+                        } else if (visitorStatusFilter === 'assigned') {
+                          if (v.status !== 'assigned' && v.crmStatus !== 'assigned') return false;
+                        }
+                      }
+
+                      return true;
                     }).sort((a, b) => {
                       const timeA = (a.createdAt?.toMillis?.() || (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0)) || 0;
                       const timeB = (b.createdAt?.toMillis?.() || (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0)) || 0;
                       return (timeB - timeA) * sortMultiplier;
                     });
+
                     if (combined.length === 0) return (
-                      <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا يوجد عملاء زوار حتى الآن.</td></tr>
+                      <tr><td colSpan="7" className="p-8 text-center text-gray-500">لا يوجد عملاء زوار متوافقين مع خيارات التصفية حتى الآن.</td></tr>
                     );
+
+                    const totalVisitorRecords = combined.length;
+                    const visitorPageSize = 10;
+                    const totalPagesVisitor = Math.max(1, Math.ceil(totalVisitorRecords / visitorPageSize));
+                    const validVisitorPage = Math.min(visitorCurrentPage, totalPagesVisitor);
+                    const paginatedVisitors = combined.slice((validVisitorPage - 1) * visitorPageSize, validVisitorPage * visitorPageSize);
                     const rows = [];
                     let lastDateStr = null;
-                    combined.forEach((visitor, idx) => {
+                    paginatedVisitors.forEach((visitor, idx) => {
                       const dateObj = visitor.createdAt?.toDate ? visitor.createdAt.toDate() : null;
                       const dateStr = dateObj ? dateObj.toDateString() : null;
                       const dateLabel = dateObj ? dateObj.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : null;
@@ -16548,6 +17023,87 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                 </tbody>
               </table>
             </div>
+
+            {/* Website Visitors Pagination Controls Bar (10 per page) */}
+            {(() => {
+              const search = tableSearch.trim() || dashboardSearch.trim();
+              const combinedList = [
+                ...visitors.map(v => ({ id: v.id, name: `${v.firstName || ''} ${v.lastName || ''}`.trim() || 'زائر موقع', phone: v.phone || v.phoneNumber, email: v.email, status: v.status || 'website_visitor', crmStatus: v.crmStatus || 'unassigned', assignedTo: v.assignedTo || 'الإدارة', assignedToUid: v.assignedToUid || 'admin' })),
+                ...customers.filter(c => c.addedBy === 'website_otp' || c.source === 'website_otp' || c.status === 'website_visitor').map(c => ({ id: c.id, name: c.name || c.phoneNumber || 'عميل مسجل OTP', phone: c.phoneNumber || c.phone, email: c.email, status: c.status || 'website_visitor', crmStatus: c.crmStatus || 'unassigned', assignedTo: c.assignedTo || 'الإدارة', assignedToUid: c.assignedToUid || 'admin' }))
+              ].filter(v => {
+                if (search) {
+                  const term = search.toLowerCase();
+                  if (!v.name?.toLowerCase().includes(term) && !v.phone?.includes(term) && !v.email?.toLowerCase().includes(term)) return false;
+                }
+                if (visitorEmpFilter !== 'all') {
+                  if (visitorEmpFilter === 'admin') {
+                    if (v.assignedToUid !== 'admin' && v.assignedTo !== 'admin' && v.assignedTo !== 'الإدارة') return false;
+                  } else {
+                    const targetEmp = employees.find(e => e.uid === visitorEmpFilter);
+                    const empMail = targetEmp?.email?.toLowerCase();
+                    if (v.assignedToUid !== visitorEmpFilter && (empMail && v.assignedTo?.toLowerCase() !== empMail)) return false;
+                  }
+                }
+                if (visitorStatusFilter !== 'all') {
+                  if (visitorStatusFilter === 'unassigned') {
+                    if (v.status !== 'unassigned' && v.crmStatus !== 'unassigned') return false;
+                  } else if (visitorStatusFilter === 'website_visitor') {
+                    if (v.status !== 'website_visitor') return false;
+                  } else if (visitorStatusFilter === 'assigned') {
+                    if (v.status !== 'assigned' && v.crmStatus !== 'assigned') return false;
+                  }
+                }
+                return true;
+              });
+
+              const totalRecords = combinedList.length;
+              const pageSize = 10;
+              const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+              const validPage = Math.min(visitorCurrentPage, totalPages);
+
+              if (totalPages <= 1) return null;
+
+              return (
+                <div className="p-4 bg-slate-900 border-t border-purple-500/20 text-amber-300 flex flex-wrap justify-between items-center gap-3">
+                  <div className="text-xs font-bold text-gray-300">
+                    عرض <span className="text-amber-400 font-mono font-extrabold">{((validPage - 1) * pageSize) + 1} - {Math.min(validPage * pageSize, totalRecords)}</span> من إجمالي <span className="text-amber-400 font-mono font-extrabold">{totalRecords}</span> عميل وزائر OTP 🌐
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setVisitorCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={validPage === 1}
+                      className="px-3 py-1.5 rounded-xl text-xs font-black bg-slate-800 border border-purple-500/30 text-amber-300 hover:bg-purple-950 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                    >
+                      ◀ السابق
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => page === 1 || page === totalPages || Math.abs(page - validPage) <= 2)
+                        .map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => setVisitorCurrentPage(page)}
+                            className={`w-7 h-7 rounded-lg text-xs font-black transition flex items-center justify-center cursor-pointer ${
+                              validPage === page
+                                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                                : 'bg-slate-800 text-amber-300 border border-purple-500/30 hover:bg-purple-950'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                    </div>
+                    <button
+                      onClick={() => setVisitorCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={validPage === totalPages}
+                      className="px-3 py-1.5 rounded-xl text-xs font-black bg-slate-800 border border-purple-500/30 text-amber-300 hover:bg-purple-950 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                    >
+                      التالي ▶
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -22006,6 +22562,149 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
             </div>
           </div>,
           document.body
+        )}
+
+        {/* INCOMING INTERNAL CALL POPUP BANNER (v2.26) */}
+        {incomingInternalCall && (
+          <div className="fixed bottom-6 right-6 z-[9999] animate-bounce-slow max-w-md w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-950/90 via-teal-900/90 to-cyan-950/90 backdrop-blur-xl border border-emerald-400/40 shadow-2xl text-white flex items-center justify-between gap-4 transition-all duration-300" dir="rtl">
+            <div className="flex items-center gap-3">
+              <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/50 animate-pulse">
+                <span className="text-2xl">📞</span>
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-sm text-emerald-300">اتصال داخلي مباشر 🌐</span>
+                  <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 animate-pulse">يرن الآن...</span>
+                </div>
+                <p className="text-xs text-white/90 font-bold mt-0.5">{incomingInternalCall.callerName || incomingInternalCall.clientName || 'عميل من موقع الويب'}</p>
+                <p className="text-[11px] text-white/70">{incomingInternalCall.phone || incomingInternalCall.phoneNumber || 'طلب محادثة أو استشارة'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={async () => {
+                  try {
+                    await updateDoc(doc(db, 'internal_calls', incomingInternalCall.id), { status: 'answered', answeredBy: currentEmpUser?.name || 'الموظف' });
+                    setIncomingInternalCall(null);
+                    setActiveTab('calls');
+                    toast.success('تم الرد على الاتصال الداخلي بنجاح 📞✨');
+                  } catch(err) {
+                    console.error('Error answering call:', err);
+                  }
+                }}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition"
+              >
+                رد 📞
+              </button>
+              <button 
+                onClick={async () => {
+                  try {
+                    await updateDoc(doc(db, 'internal_calls', incomingInternalCall.id), { status: 'rejected' });
+                    setIncomingInternalCall(null);
+                  } catch(err) {
+                    console.error('Error rejecting call:', err);
+                  }
+                }}
+                className="px-3 py-1.5 bg-red-600/80 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow transition"
+              >
+                إنهاء ❌
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* PLATFORM VIDEO UPLOADER MODAL (v2.26) */}
+        {isUploadVideoModalOpen && (
+          <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto" dir="rtl">
+            <div className="bg-slate-900 border-2 border-purple-500/40 text-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-purple-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-400/30">
+                    <Video size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-base text-amber-300">رفع فيديو جديد للمنصة 🎥</h3>
+                    <p className="text-xs text-slate-300">للسوق {videoMarket === 'saudi' ? 'السعودي 🇸🇦' : 'الأمريكي 🇺🇸'}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsUploadVideoModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSavePlatformVideo} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">عنوان الفيديو 🎥 <span className="text-rose-400">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={videoTitle}
+                    onChange={(e) => setVideoTitle(e.target.value)}
+                    placeholder="مثال: شرح طريقة الدخول في صفقات الأسهم النسرية..."
+                    className="w-full bg-slate-950 border border-purple-500/30 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">السوق الموجه له الفيديو</label>
+                  <select
+                    value={videoMarket}
+                    onChange={(e) => setVideoMarket(e.target.value)}
+                    className="w-full bg-slate-950 border border-purple-500/30 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  >
+                    <option value="saudi">🇸🇦 السوق السعودي (تاسي)</option>
+                    <option value="us">🇺🇸 السوق الأمريكي (أسهم وعقود)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">وصف أو تفاصيل ملخصة</label>
+                  <textarea
+                    rows="3"
+                    value={videoDescription}
+                    onChange={(e) => setVideoDescription(e.target.value)}
+                    placeholder="توضيح مختصر لأبرز المحاور والنقاط..."
+                    className="w-full bg-slate-950 border border-purple-500/30 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">اختر ملف الفيديو (.mp4, .mov, .webm) <span className="text-rose-400">*</span></label>
+                  <input
+                    type="file"
+                    accept="video/*,.mp4,.mov,.webm,.mkv"
+                    required
+                    onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                    className="w-full bg-slate-950 border border-purple-500/30 rounded-xl px-3 py-2 text-xs text-slate-300 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-600 file:text-white hover:file:bg-purple-500"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsUploadVideoModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-xs transition"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={videoUploading}
+                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs transition shadow-lg flex items-center gap-1.5"
+                  >
+                    {videoUploading ? 'جاري الرفع... ⏳' : 'نشر الفيديو 🎥'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
       </main>
     </div>
