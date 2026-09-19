@@ -22564,28 +22564,22 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
           document.body
         )}
 
-        {/* INCOMING INTERNAL CALL POPUP BANNER (v2.26) */}
+        {/* Floating Ringing Call Banner for Staff - Top of Dashboard (Image 1 Parity) */}
         {incomingInternalCall && (
-          <div className="fixed bottom-6 right-6 z-[9999] animate-bounce-slow max-w-md w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-950/90 via-teal-900/90 to-cyan-950/90 backdrop-blur-xl border border-emerald-400/40 shadow-2xl text-white flex items-center justify-between gap-4 transition-all duration-300" dir="rtl">
+          <div className="fixed top-6 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-[9999] bg-gradient-to-r from-slate-900/95 via-indigo-950/95 to-slate-900/95 backdrop-blur-2xl border-2 border-cyan-400 text-white p-4.5 rounded-3xl shadow-[0_20px_60px_rgba(6,182,212,0.6)] animate-bounce font-sans border-t-2 border-t-cyan-300" dir="rtl">
             <div className="flex items-center gap-3">
-              <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/50 animate-pulse">
-                <span className="text-2xl">📞</span>
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
+              <div className="w-12 h-12 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 animate-ping shrink-0">
+                <PhoneCall size={24} />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-sm text-emerald-300">اتصال داخلي مباشر 🌐</span>
-                  <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 animate-pulse">يرن الآن...</span>
-                </div>
-                <p className="text-xs text-white/90 font-bold mt-0.5">{incomingInternalCall.callerName || incomingInternalCall.clientName || 'عميل من موقع الويب'}</p>
-                <p className="text-[11px] text-white/70">{incomingInternalCall.phone || incomingInternalCall.phoneNumber || 'طلب محادثة أو استشارة'}</p>
+              <div className="flex-1">
+                <h4 className="font-extrabold text-xs sm:text-sm text-cyan-300">
+                  📞 اتصال داخلي جاري من {incomingInternalCall.callerName || incomingInternalCall.clientName || 'العميل'}!
+                </h4>
+                <p className="text-[11px] text-gray-200 mt-0.5">ويرغب في تنبيهك والتواصل الفوري معك في الشات.</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button 
+            <div className="mt-3.5 flex gap-2">
+              <button
                 onClick={async () => {
                   try {
                     await updateDoc(doc(db, 'internal_calls', incomingInternalCall.id), { status: 'answered', answeredBy: currentEmpUser?.name || 'الموظف' });
@@ -22596,11 +22590,12 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     console.error('Error answering call:', err);
                   }
                 }}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition"
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
               >
-                رد 📞
+                <MessageCircle size={14} />
+                <span>فتح المحادثة والرد</span>
               </button>
-              <button 
+              <button
                 onClick={async () => {
                   try {
                     await updateDoc(doc(db, 'internal_calls', incomingInternalCall.id), { status: 'rejected' });
@@ -22609,9 +22604,9 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     console.error('Error rejecting call:', err);
                   }
                 }}
-                className="px-3 py-1.5 bg-red-600/80 hover:bg-red-500 text-white text-xs font-bold rounded-xl shadow transition"
+                className="px-4 bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 py-2 rounded-2xl text-xs font-bold transition cursor-pointer"
               >
-                إنهاء ❌
+                إلغاء / كنسل
               </button>
             </div>
           </div>
