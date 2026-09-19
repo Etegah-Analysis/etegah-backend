@@ -1478,26 +1478,78 @@ const Dashboard = () => {
     }
   };
 
-  // Web Audio Notification Chime (Crystal Clear Synthesized Chime)
+  // AudioContext Ref for persistent Web Audio API unlocking
+  const audioCtxRef = useRef(null);
+  useEffect(() => {
+    const unlockAudio = () => {
+      try {
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume();
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
+
+  // Web Audio Notification Chime (Crystal Clear Synthesized Loud Chime)
   const playNotificationSound = () => {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.35);
+      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+        audioCtxRef.current = AudioCtx ? new AudioCtx() : null;
+      }
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+
+      if (audioCtxRef.current) {
+        const ctx = audioCtxRef.current;
+        const now = ctx.currentTime;
+        
+        // Osc 1: Primary D5 -> A5 Loud Chime
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now);
+        osc1.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+        gain1.gain.setValueAtTime(0.5, now);
+        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.4);
+
+        // Osc 2: High harmony E6 bell accent
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1318.51, now + 0.12);
+        gain2.gain.setValueAtTime(0.3, now + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.5);
+      }
     } catch (e) {
-      // Audio playback policy silent catch
+      console.warn('Notification sound playback error:', e);
     }
+  };
+
+  const getItemMsgKey = (item) => {
+    if (!item) return '';
+    const msg = item.lastMessage || item.message || item.lastMsg || '';
+    const time = getTimestampMillis(item.updatedAt) || getTimestampMillis(item.createdAt) || item.timestampMillis || '';
+    const unread = item.unread || 0;
+    return `${msg}_${unread}_${time}`;
   };
 
   const getClientNameOrPhone = (c) => {
@@ -1523,14 +1575,37 @@ const Dashboard = () => {
     }
   });
 
+  const [dismissedNotifMap, setDismissedNotifMap] = useState(() => {
+    try {
+      const saved = localStorage.getItem('etegah_dashboard_dismissed_notif_map');
+      return saved ? JSON.parse(saved) : {};
+    } catch(e) {
+      return {};
+    }
+  });
+
   const dismissNotifIds = (idsToDismiss) => {
+    const list = Array.isArray(idsToDismiss) ? idsToDismiss : [idsToDismiss];
     setDismissedNotifIds(prev => {
-      const arrayToDismiss = Array.isArray(idsToDismiss) ? idsToDismiss : [idsToDismiss];
-      const next = Array.from(new Set([...prev, ...arrayToDismiss]));
+      const idArray = list.map(i => typeof i === 'string' ? i : i.id);
+      const next = Array.from(new Set([...prev, ...idArray]));
       try {
         localStorage.setItem('etegah_dashboard_dismissed_notif_ids', JSON.stringify(next));
       } catch (e) {}
       return next;
+    });
+
+    setDismissedNotifMap(prevMap => {
+      const newMap = { ...prevMap };
+      list.forEach(item => {
+        const id = typeof item === 'string' ? item : item.id;
+        const key = typeof item === 'string' ? 'dismissed' : getItemMsgKey(item);
+        newMap[id] = key || 'dismissed';
+      });
+      try {
+        localStorage.setItem('etegah_dashboard_dismissed_notif_map', JSON.stringify(newMap));
+      } catch(e) {}
+      return newMap;
     });
   };
   const notifDropdownRef = useRef(null);
@@ -1574,7 +1649,15 @@ const Dashboard = () => {
 
     // A. Filter Customer Chats strictly by Employee Role & Assigned Scope (Admin sees all, Leader sees team, Agent sees assigned)
     const filteredCustomerChats = allCandidateCustomerChats.filter(c => {
-      if (dismissedNotifIds.includes(c.id)) return false;
+      const currentKey = getItemMsgKey(c);
+      const savedDismissedKey = dismissedNotifMap[c.id];
+      if (savedDismissedKey) {
+        if (savedDismissedKey === currentKey || (Number(c.unread) === 0 && c.unread !== true)) {
+          return false;
+        }
+      } else if (dismissedNotifIds.includes(c.id) && (Number(c.unread) === 0 && c.unread !== true)) {
+        return false;
+      }
 
       const isRead = c.readBy && (
         c.readBy.includes(currentUser.uid) || 
@@ -1632,7 +1715,15 @@ const Dashboard = () => {
 
     // B. Filter Employee Groups strictly for members only
     const filteredGroups = (internalGroups || []).filter(g => {
-      if (dismissedNotifIds.includes(g.id)) return false;
+      const currentKey = getItemMsgKey(g);
+      const savedDismissedKey = dismissedNotifMap[g.id];
+      if (savedDismissedKey) {
+        if (savedDismissedKey === currentKey || (Number(g.unread) === 0 && g.unread !== true)) {
+          return false;
+        }
+      } else if (dismissedNotifIds.includes(g.id) && (Number(g.unread) === 0 && g.unread !== true)) {
+        return false;
+      }
       if (!g.lastMessage) return false;
       const isLastSenderMe = g.lastMessageSenderUid === currentUser.uid || (isAdmin && (g.lastMessageSenderUid === 'admin' || g.lastMessageSenderUid === currentUser.uid));
       if (isLastSenderMe) return false;
@@ -1661,7 +1752,7 @@ const Dashboard = () => {
       const timeB = getTimestampMillis(b.updatedAt) || getTimestampMillis(b.createdAt) || 0;
       return timeB - timeA;
     });
-  }, [customers, internalGroups, currentUser, isAdmin, isCoordinator, isLeader, myTeamMembers]);
+  }, [customers, internalGroups, currentUser, isAdmin, isCoordinator, isLeader, myTeamMembers, dismissedNotifIds, dismissedNotifMap]);
 
   const totalUnreadWhatsAppCount = useMemo(() => {
     return unreadWhatsAppChats.reduce((sum, c) => sum + (Number(c.unread) || 1), 0);
@@ -1687,8 +1778,6 @@ const Dashboard = () => {
       });
   }, [internalEmails, currentUser, myUid, isAdmin, isCoordinator, isLeader, myTeamMembers, currentEmpUser, myEmail]);
 
-
-
   // Real-time live toast alert when new WhatsApp or Group message arrives on Dashboard
   useEffect(() => {
     if (!customers && !internalGroups) return;
@@ -1697,10 +1786,10 @@ const Dashboard = () => {
       // Store initial counts on first load without firing toasts
       const initialMap = {};
       (customers || []).forEach(c => {
-        initialMap[c.id] = Number(c.unread) || 0;
+        initialMap[c.id] = getItemMsgKey(c) || (Number(c.unread) || 0);
       });
       (internalGroups || []).forEach(g => {
-        initialMap[g.id] = getTimestampMillis(g.updatedAt) || Date.now();
+        initialMap[g.id] = getItemMsgKey(g) || (getTimestampMillis(g.updatedAt) || Date.now());
       });
       prevUnreadMapRef.current = initialMap;
       isFirstLoadRef.current = false;
@@ -1708,12 +1797,10 @@ const Dashboard = () => {
     }
 
     unreadWhatsAppChats.forEach(c => {
-      const prevCount = prevUnreadMapRef.current[c.id] || 0;
-      const currentCount = c.isGroup 
-        ? (getTimestampMillis(c.updatedAt) || Date.now()) 
-        : (Number(c.unread) || (c.status === 'unassigned' ? 1 : 0));
+      const prevKey = prevUnreadMapRef.current[c.id];
+      const currentKey = getItemMsgKey(c) || `${c.id}_${c.unread || 1}`;
 
-      if (currentCount > prevCount) {
+      if (prevKey !== undefined && prevKey !== currentKey) {
         // New incoming message!
         playNotificationSound();
         setHasViewedNotifications(false);
@@ -1812,10 +1899,10 @@ const Dashboard = () => {
     // Update map
     const newMap = {};
     (customers || []).forEach(c => {
-      newMap[c.id] = Number(c.unread) || 0;
+      newMap[c.id] = getItemMsgKey(c) || (Number(c.unread) || 0);
     });
     (internalGroups || []).forEach(g => {
-      newMap[g.id] = getTimestampMillis(g.updatedAt) || Date.now();
+      newMap[g.id] = getItemMsgKey(g) || (getTimestampMillis(g.updatedAt) || Date.now());
     });
     prevUnreadMapRef.current = newMap;
   }, [customers, internalGroups, unreadWhatsAppChats, navigate]);
