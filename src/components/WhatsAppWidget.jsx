@@ -54,6 +54,7 @@ export default function WhatsAppWidget() {
 
   const ringingIntervalRef = useRef(null);
   const [activeInternalCall, setActiveInternalCall] = useState(null);
+  const [isClientCallRinging, setIsClientCallRinging] = useState(false);
 
   // Play repeating telephone ringing chime
   const startRingingBellSound = () => {
@@ -108,16 +109,22 @@ export default function WhatsAppWidget() {
     const unsub = onSnapshot(callDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.status === 'ringing' && data.callerType === 'staff') {
-          setActiveInternalCall(data);
-          startRingingBellSound();
-          triggerBrowserNotification(`📞 اتصال داخلي جاري من ${data.empName || 'الموظف'}...`);
+        if (data.status === 'ringing') {
+          if (data.callerType === 'staff') {
+            setActiveInternalCall(data);
+            startRingingBellSound();
+          } else if (data.callerType === 'client') {
+            setIsClientCallRinging(true);
+            startRingingBellSound();
+          }
         } else {
           setActiveInternalCall(null);
+          setIsClientCallRinging(false);
           stopRingingBellSound();
         }
       } else {
         setActiveInternalCall(null);
+        setIsClientCallRinging(false);
         stopRingingBellSound();
       }
     }, (err) => console.error("Internal call listener error:", err));
@@ -128,12 +135,27 @@ export default function WhatsAppWidget() {
     };
   }, [userPhone]);
 
-  // Trigger internal call from client to staff
+  // Toggle trigger or cancel internal call from client to staff
   const handleTriggerInternalCall = async () => {
     if (!userPhone) return;
     const cleanPhone = userPhone.replace(/[^0-9]/g, '');
     const callDocRef = doc(db, 'internal_calls', cleanPhone);
 
+    if (isClientCallRinging) {
+      // Cancel / End active call
+      try {
+        stopRingingBellSound();
+        setIsClientCallRinging(false);
+        await setDoc(callDocRef, { status: 'cancelled' }, { merge: true });
+        setToastAlert('تم إنهاء اتصال التنبيه الداخلي 🛑');
+        setTimeout(() => setToastAlert(null), 3000);
+      } catch (err) {
+        console.error("Cancel call error:", err);
+      }
+      return;
+    }
+
+    // Start call
     try {
       await setDoc(callDocRef, {
         id: cleanPhone,
@@ -151,12 +173,14 @@ export default function WhatsAppWidget() {
         conversationId: cleanPhone,
         phoneNumber: userPhone,
         sender: 'client',
-        text: "تنبيه بوجود رسالة",
+        text: "📞 تنبيه بوجود اتصال ورسالة",
         timestamp: serverTimestamp()
       });
 
+      setIsClientCallRinging(true);
       startRingingBellSound();
-      alert(`جاري الاتصال والتنبيه للموظف (${assignedEmp?.name || 'خدمة العملاء'})... 📞🔔`);
+      setToastAlert(`جاري الاتصال والتنبيه للموظف (${assignedEmp?.name || 'خدمة العملاء'})... 📞🔔`);
+      setTimeout(() => setToastAlert(null), 4000);
 
       setTimeout(async () => {
         try {
@@ -1079,15 +1103,28 @@ export default function WhatsAppWidget() {
                   )}
                 </div>
 
-                {/* Left Side: Standalone Internal Call Alert Trigger Button */}
+                {/* Left Side: Standalone Internal Call Alert Toggle Button */}
                 <button
                   type="button"
                   onClick={handleTriggerInternalCall}
-                  className="flex items-center gap-1.5 text-cyan-200 text-[10px] sm:text-[11px] font-bold bg-cyan-900/70 hover:bg-cyan-800/90 p-1.5 px-2.5 rounded-xl border border-cyan-400/50 shadow-md transition cursor-pointer active:scale-95 animate-pulse shrink-0"
-                  title="اضغط لإرسال اتصال داخلي للتنبيه بالرسائل فوراً 📞"
+                  className={`flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold p-1.5 px-2.5 rounded-xl shadow-md transition cursor-pointer active:scale-95 shrink-0 border ${
+                    isClientCallRinging
+                      ? 'bg-rose-950/90 hover:bg-rose-900 text-rose-200 border-rose-500/80 animate-pulse ring-2 ring-rose-500/40'
+                      : 'bg-cyan-900/70 hover:bg-cyan-800/90 text-cyan-200 border-cyan-400/50 animate-pulse'
+                  }`}
+                  title={isClientCallRinging ? "اضغط لإنهاء اتصال التنبيه الداخلي 🛑" : "اضغط لإرسال اتصال داخلي للتنبيه بالرسائل فوراً 📞"}
                 >
-                  <PhoneCall size={13} className="text-cyan-300 shrink-0" />
-                  <span>اتصال داخلي للتنبيه بالرسائل</span>
+                  {isClientCallRinging ? (
+                    <>
+                      <PhoneCall size={13} className="text-rose-400 shrink-0 animate-spin" />
+                      <span>🛑 إنهاء اتصال التنبيه</span>
+                    </>
+                  ) : (
+                    <>
+                      <PhoneCall size={13} className="text-cyan-300 shrink-0" />
+                      <span>اتصال داخلي للتنبيه بالرسائل</span>
+                    </>
+                  )}
                 </button>
               </div>
             )}
