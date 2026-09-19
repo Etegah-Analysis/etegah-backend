@@ -11,6 +11,7 @@ import LandingPage from './pages/LandingPage';
 import Home from './pages/Home';
 import USOptions from './pages/USOptions';
 import News from './pages/News';
+import PlatformVideos from './pages/PlatformVideos';
 import Navbar from './components/Navbar';
 
 import WhatsAppWidget from './components/WhatsAppWidget';
@@ -145,6 +146,10 @@ function App() {
           <Route 
             path="/news" 
             element={<VisitorProtectedRoute><PublicLayout><News /></PublicLayout></VisitorProtectedRoute>} 
+          />
+          <Route 
+            path="/platform-videos" 
+            element={<VisitorProtectedRoute><PublicLayout><PlatformVideos /></PublicLayout></VisitorProtectedRoute>} 
           />
         </Routes>
       </BrowserRouter>

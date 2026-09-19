@@ -251,24 +251,41 @@ export default function LandingPage() {
         console.warn('Firestore users lookup warning:', dbErr);
       }
 
-      // 2. Try Firebase Auth if candidate email
+      // 2. Check Admin candidate emails & Auth
+      const adminInput = rawInput === 'admin' || rawInput === 'الإدارة' || rawInput === 'ادارة' || rawInput === 'اداره';
       if (!matchedEmp) {
-        try {
-          const authEmail = rawInput.includes('@') ? rawInput : `${safeInput}@etegah.com`;
-          const userCred = await signInWithEmailAndPassword(auth, authEmail, empPassword);
-          if (userCred && userCred.user) {
-            const uDoc = await getDoc(doc(db, 'users', userCred.user.uid));
-            if (uDoc.exists()) {
-              matchedEmp = { id: uDoc.id, ...uDoc.data() };
-            } else {
-              matchedEmp = { name: userCred.user.displayName || rawInput, role: 'موظف' };
+        const candidateEmails = [];
+        if (adminInput || rawInput.includes('@')) {
+          if (rawInput.includes('@')) candidateEmails.push(rawInput);
+          candidateEmails.push('etegahanalysis@gmail.com');
+          candidateEmails.push('mohamed.gamal.work0@gmail.com');
+          candidateEmails.push('admin@etegah.com');
+        } else {
+          candidateEmails.push(`${safeInput}@etegah.com`);
+        }
+
+        for (const emailToTry of candidateEmails) {
+          try {
+            const userCred = await signInWithEmailAndPassword(auth, emailToTry, empPassword);
+            if (userCred && userCred.user) {
+              const uDoc = await getDoc(doc(db, 'users', userCred.user.uid));
+              if (uDoc.exists()) {
+                matchedEmp = { id: uDoc.id, ...uDoc.data() };
+              } else {
+                matchedEmp = { 
+                  name: adminInput ? '👑 الإدارة' : (userCred.user.displayName || rawInput), 
+                  role: adminInput ? 'admin' : 'موظف',
+                  isAdmin: adminInput
+                };
+              }
+              break;
             }
-          }
-        } catch (authErr) {}
+          } catch (authErr) {}
+        }
       }
 
       if (!matchedEmp) {
-        setEmpError('بيانات الدخول غير صحيحة. يرجى التأكد من اسم الموظف وكلمة المرور.');
+        setEmpError('بيانات الدخول غير صحيحة. يرجى التأكد من اسم الموظف/الأدمن وكلمة المرور.');
         setEmpLoading(false);
         return;
       }
@@ -279,13 +296,14 @@ export default function LandingPage() {
         return;
       }
 
-      const alias = matchedEmp.aliasName || matchedEmp.pseudonym || matchedEmp.displayName || matchedEmp.username || matchedEmp.name || empIdentifier;
-      const title = matchedEmp.title || matchedEmp.role || matchedEmp.jobTitle || 'مستشار مالي';
+      const isAdminUser = adminInput || matchedEmp.role === 'admin' || matchedEmp.isAdmin === true || matchedEmp.email === 'etegahanalysis@gmail.com';
+      const alias = isAdminUser ? '👑 الإدارة' : (matchedEmp.aliasName || matchedEmp.pseudonym || matchedEmp.displayName || matchedEmp.username || matchedEmp.name || empIdentifier);
+      const title = isAdminUser ? 'الأدمن / الإدارة' : (matchedEmp.title || matchedEmp.role || matchedEmp.jobTitle || 'مستشار مالي');
 
       localStorage.setItem('isEmpLoggedIn', 'true');
       localStorage.setItem('empAliasName', alias);
       localStorage.setItem('empTitle', title);
-      localStorage.setItem('empCode', matchedEmp.empCode || '');
+      localStorage.setItem('empCode', matchedEmp.empCode || (isAdminUser ? 'ADMIN' : ''));
       localStorage.setItem('visitorName', alias);
       localStorage.setItem('visitorPhone', matchedEmp.phoneNumber || matchedEmp.phone || '0000000000');
 

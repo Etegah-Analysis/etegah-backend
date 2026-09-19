@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut, MessageCircle, Bell, ShieldCheck } from 'lucide-react';
+import { Menu, X, User, LogOut, MessageCircle, Bell, ShieldCheck, Trash2 } from 'lucide-react';
 import { db, collection, query, where, onSnapshot, doc, getDocs } from '../firebase';
 import logoImg from '../assets/logo.jpg';
 
@@ -80,13 +80,16 @@ export default function Navbar() {
         return tB - tA;
       });
 
-      setNotifications(incomingMsgs);
+      const savedReadIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
+      const unreadFilteredMsgs = incomingMsgs.filter(m => !savedReadIds.includes(m.id));
+
+      setNotifications(unreadFilteredMsgs);
 
       // Filter unread notifications count based on lastReadTimestamp
       const savedLastRead = localStorage.getItem(`etegah_notif_last_read_${cleanPhone}`);
       const lastReadTime = savedLastRead ? parseInt(savedLastRead, 10) : 0;
 
-      const unreadList = incomingMsgs.filter(m => {
+      const unreadList = unreadFilteredMsgs.filter(m => {
         const msgTime = m.timestamp?.toMillis ? m.timestamp.toMillis() : (m.timestamp ? new Date(m.timestamp).getTime() : 0);
         return msgTime > lastReadTime;
       });
@@ -140,6 +143,35 @@ export default function Navbar() {
     setIsNotifOpen(nextState);
     if (nextState && visitorPhone) {
       const cleanPhone = visitorPhone.replace(/[^0-9]/g, '');
+      localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
+      setUnreadCount(0);
+    }
+  };
+
+  const handleOpenNotificationMessage = (msgId) => {
+    window.dispatchEvent(new CustomEvent('open_whatsapp_widget', { detail: { targetMsgId: msgId } }));
+    setIsNotifOpen(false);
+    setIsMobileMenuOpen(false);
+
+    if (visitorPhone) {
+      const cleanPhone = visitorPhone.replace(/[^0-9]/g, '');
+      const savedReadIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
+      if (msgId && !savedReadIds.includes(msgId)) {
+        savedReadIds.push(msgId);
+        localStorage.setItem(`etegah_read_ids_${cleanPhone}`, JSON.stringify(savedReadIds));
+      }
+      setNotifications(prev => prev.filter(m => m.id !== msgId));
+      localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
+      setUnreadCount(0);
+    }
+  };
+
+  const handleClearAllNotifications = () => {
+    if (visitorPhone) {
+      const cleanPhone = visitorPhone.replace(/[^0-9]/g, '');
+      const allIds = notifications.map(m => m.id);
+      localStorage.setItem(`etegah_read_ids_${cleanPhone}`, JSON.stringify(allIds));
+      setNotifications([]);
       localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
       setUnreadCount(0);
     }
@@ -217,6 +249,9 @@ export default function Navbar() {
           <Link to="/news" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
             أخبار السوق السعودي
           </Link>
+          <Link to="/platform-videos" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+            فيديوهات المنصة والنتائج السابقة
+          </Link>
           <Link to="/us-options" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
             أخبار السوق الأمريكي
           </Link>
@@ -247,17 +282,25 @@ export default function Navbar() {
                           <span className="font-extrabold text-cyan-300 flex items-center gap-1">
                             <Bell size={14} /> إشعارات الرسائل الواردة
                           </span>
-                          <span className="text-[10px] text-gray-400 font-mono">({notifications.length})</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-400 font-mono">({notifications.length})</span>
+                            {notifications.length > 0 && (
+                              <button
+                                onClick={handleClearAllNotifications}
+                                className="text-[10px] text-rose-300 hover:text-rose-100 bg-rose-950/70 hover:bg-rose-900 border border-rose-500/30 px-1.5 py-0.5 rounded-md transition cursor-pointer flex items-center gap-0.5"
+                                title="تصفير ومسح الإشعارات"
+                              >
+                                <Trash2 size={10} /> مسح 🧹
+                              </button>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                        <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                           {notifications.map((msg) => (
                             <div
                               key={msg.id}
-                              onClick={() => {
-                                handleOpenChat();
-                                setIsNotifOpen(false);
-                              }}
+                              onClick={() => handleOpenNotificationMessage(msg.id)}
                               className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-950/40 border border-white/5 hover:border-cyan-500/30 transition cursor-pointer"
                             >
                               <div className="flex items-center justify-between mb-1">

@@ -254,7 +254,7 @@ export default function WhatsAppWidget() {
 
   // Listen for custom trigger to open WhatsApp widget from anywhere in app
   useEffect(() => {
-    const handleOpenWidget = () => {
+    const handleOpenWidget = (e) => {
       const phone = localStorage.getItem('visitorPhone') || '';
       if (!phone) {
         alert('يرجى تسجيل الدخول أولاً بالـ OTP لتأكيد حسابك وبدء التواصل المباشر 🔐');
@@ -263,6 +263,20 @@ export default function WhatsAppWidget() {
       }
       setIsOpen(true);
       clearNotifications();
+
+      const targetId = e?.detail?.targetMsgId;
+      if (targetId) {
+        setTimeout(() => {
+          const el = document.getElementById(`msg-${targetId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-2', 'ring-cyan-400', 'animate-pulse');
+            setTimeout(() => {
+              el.classList.remove('ring-2', 'ring-cyan-400', 'animate-pulse');
+            }, 3000);
+          }
+        }, 400);
+      }
     };
     window.addEventListener('open_whatsapp_widget', handleOpenWidget);
     return () => window.removeEventListener('open_whatsapp_widget', handleOpenWidget);
@@ -1218,7 +1232,7 @@ export default function WhatsAppWidget() {
                     messages.map((msg, idx) => {
                       const isClient = msg.sender === 'client';
                       return (
-                        <div key={msg.id || idx} className={`group flex flex-col ${isClient ? 'items-end' : 'items-start'} relative`}>
+                        <div key={msg.id || idx} id={`msg-${msg.id}`} className={`group flex flex-col ${isClient ? 'items-end' : 'items-start'} relative transition-all duration-300 rounded-2xl`}>
                           <div className={`relative ${isExpanded ? 'max-w-md sm:max-w-xl' : 'max-w-[85%]'} p-3 rounded-2xl text-xs leading-relaxed shadow-lg ${
                             isClient 
                               ? 'bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white rounded-br-none border border-cyan-400/30' 
