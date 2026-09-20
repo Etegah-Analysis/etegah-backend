@@ -3178,9 +3178,20 @@ const Dashboard = () => {
   const totalPendingAll = useMemo(() => unassignedWhatsappCount + unassignedLeadsCrmCount + unassignedEmployeeLeadsCount, [unassignedWhatsappCount, unassignedLeadsCrmCount, unassignedEmployeeLeadsCount]);
   const unassignedCount = unassignedWhatsappCount;
 
+  const isWebsiteVisitorLead = useCallback((c) => {
+    if (!c) return false;
+    if (c.isWebsiteLead) return true;
+    const matchStrings = ['website', 'website_otp', 'website_visitor', 'موقع', 'موقع الويب (otp)', 'موقع الاتجاه (otp)', 'otp', 'webhook'];
+    const src = (c.source || '').toLowerCase();
+    const added = (c.addedBy || '').toLowerCase();
+    const assigned = (c.assignedBy || '').toLowerCase();
+    const st = (c.status || '').toLowerCase();
+    return matchStrings.some(w => src.includes(w) || added.includes(w) || assigned.includes(w) || st.includes(w));
+  }, []);
+
   const whatsappVisitorsCount = useMemo(() => {
-    return (visitors?.length || 0) + (customers?.filter(c => c.addedBy === 'website_otp' || c.source === 'website_otp' || c.status === 'website_visitor')?.length || 0);
-  }, [visitors, customers]);
+    return (visitors?.length || 0) + (customers?.filter(isWebsiteVisitorLead)?.length || 0);
+  }, [visitors, customers, isWebsiteVisitorLead]);
 
   const displayLeadsCrmCount = useMemo(() => {
     const cached = Number(localStorage.getItem('cache_leadsCrm_total_count') || 0);
@@ -17036,7 +17047,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                           onChange={() => {
                             const combinedIds = [
                               ...visitors.map(v => v.id),
-                              ...customers.filter(c => c.addedBy === 'website_otp' || c.source === 'website_otp' || c.status === 'website_visitor').map(c => c.id)
+                              ...customers.filter(isWebsiteVisitorLead).map(c => c.id)
                             ];
                             if (selectedVisitors.length > 0) setSelectedVisitors([]);
                             else setSelectedVisitors(combinedIds);
@@ -17141,11 +17152,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                         isVisitorDoc: true,
                         _raw: v 
                       })),
-                      ...customers.filter(c => 
-                        c.addedBy === 'website_otp' || 
-                        c.source === 'website_otp' || 
-                        c.status === 'website_visitor'
-                      ).map(c => ({ 
+                      ...customers.filter(isWebsiteVisitorLead).map(c => ({ 
                         id: c.id, 
                         name: c.name || c.phoneNumber || 'عميل مسجل OTP', 
                         phone: c.phoneNumber || c.phone, 
@@ -17458,7 +17465,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               const search = tableSearch.trim() || dashboardSearch.trim();
               const combinedList = [
                 ...visitors.map(v => ({ id: v.id, name: `${v.firstName || ''} ${v.lastName || ''}`.trim() || 'زائر موقع', phone: v.phone || v.phoneNumber, email: v.email, status: v.status || 'website_visitor', crmStatus: v.crmStatus || 'unassigned', assignedTo: v.assignedTo || 'الإدارة', assignedToUid: v.assignedToUid || 'admin' })),
-                ...customers.filter(c => c.addedBy === 'website_otp' || c.source === 'website_otp' || c.status === 'website_visitor').map(c => ({ id: c.id, name: c.name || c.phoneNumber || 'عميل مسجل OTP', phone: c.phoneNumber || c.phone, email: c.email, status: c.status || 'website_visitor', crmStatus: c.crmStatus || 'unassigned', assignedTo: c.assignedTo || 'الإدارة', assignedToUid: c.assignedToUid || 'admin' }))
+                ...customers.filter(isWebsiteVisitorLead).map(c => ({ id: c.id, name: c.name || c.phoneNumber || 'عميل مسجل OTP', phone: c.phoneNumber || c.phone, email: c.email, status: c.status || 'website_visitor', crmStatus: c.crmStatus || 'unassigned', assignedTo: c.assignedTo || 'الإدارة', assignedToUid: c.assignedToUid || 'admin' }))
               ].filter(v => {
                 if (search) {
                   const term = search.toLowerCase();
