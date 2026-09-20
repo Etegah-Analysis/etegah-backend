@@ -27,6 +27,8 @@ export default function Navbar() {
   const isInitialNotifMount = useRef(true);
   const prevUnreadNotifCountRef = useRef(0);
 
+  const [isAdmin, setIsAdmin] = useState(false);
+
   // Check login state (Customer vs Employee)
   useEffect(() => {
     const name = localStorage.getItem('visitorName');
@@ -34,11 +36,25 @@ export default function Navbar() {
     const isEmpLogged = localStorage.getItem('isEmpLoggedIn') === 'true';
     const alias = localStorage.getItem('empAliasName') || '';
     const title = localStorage.getItem('empTitle') || '';
+    const empCode = localStorage.getItem('empCode') || '';
 
     setIsEmp(isEmpLogged);
     if (alias) setEmpAliasName(alias);
     if (title) setEmpTitle(title);
     if (name) setVisitorName(name);
+
+    const normTitle = (title || '').toLowerCase();
+    const normCode = (empCode || '').toLowerCase();
+    const adminCheck = isEmpLogged && (
+      normTitle.includes('admin') || 
+      normTitle.includes('أدمن') || 
+      normTitle.includes('ادمن') || 
+      normTitle.includes('مدير') || 
+      normTitle.includes('إدارة') || 
+      normTitle.includes('اداره') || 
+      normCode.includes('admin')
+    );
+    setIsAdmin(adminCheck);
 
     if (!phone) return;
     const cleanPhone = phone.replace(/[^0-9]/g, '');
@@ -195,8 +211,11 @@ export default function Navbar() {
     const savedReadMsgIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
     const savedReadPlatformIds = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${cleanPhone}`) || '[]');
 
-    // For employee accounts, suppress customer WhatsApp chats completely (Employees only get Reports 📄 & Videos 🎥)
-    const filteredChatMsgs = isEmp ? [] : chatNotifications.filter(m => !savedReadMsgIds.includes(m.id));
+    // Admin receives ALL notifications (Customer WhatsApp chats, website chats, reports & videos).
+    // Non-admin employees receive ONLY Reports 📄 & Videos 🎥 notifications (customer chats suppressed).
+    // Visitors/Customers receive their chat notifications + platform reports & videos.
+    const shouldSuppressCustomerChats = isEmp && !isAdmin;
+    const filteredChatMsgs = shouldSuppressCustomerChats ? [] : chatNotifications.filter(m => !savedReadMsgIds.includes(m.id));
     const filteredPlatformMsgs = platformNotifications.filter(m => !savedReadPlatformIds.includes(m.id));
 
     const merged = [...filteredChatMsgs, ...filteredPlatformMsgs].sort((a, b) => {
@@ -222,7 +241,7 @@ export default function Navbar() {
     prevUnreadNotifCountRef.current = unreadList.length;
 
     setUnreadCount(unreadList.length);
-  }, [chatNotifications, platformNotifications, visitorPhone, isEmp]);
+  }, [chatNotifications, platformNotifications, visitorPhone, isEmp, isAdmin]);
 
   // Listen to custom window events for clearing notifications
   useEffect(() => {
