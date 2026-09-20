@@ -100,10 +100,30 @@ export default function Inbox() {
       : query(collection(db, 'بيانات_تسجيل_العملاء'), where('assignedToUid', '==', currentUser.uid)); // No orderBy to avoid needing a composite index
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      let chatsData = [];
+      const rawChats = [];
       snapshot.forEach((doc) => {
-        chatsData.push({ id: doc.id, ...doc.data() });
+        rawChats.push({ id: doc.id, ...doc.data() });
       });
+
+      const phoneMap = new Map();
+      rawChats.forEach(item => {
+        const rawPhone = item.phoneNumber || item.phone || item.id;
+        const cleanKey = rawPhone ? String(rawPhone).replace(/[^0-9]/g, '') : item.id;
+
+        if (!phoneMap.has(cleanKey)) {
+          phoneMap.set(cleanKey, item);
+        } else {
+          const existing = phoneMap.get(cleanKey);
+          const timeExisting = existing.updatedAt?.toMillis ? existing.updatedAt.toMillis() : (existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0);
+          const timeItem = item.updatedAt?.toMillis ? item.updatedAt.toMillis() : (item.updatedAt ? new Date(item.updatedAt).getTime() : 0);
+
+          if (timeItem > timeExisting || (item.unread || 0) > (existing.unread || 0) || (item.lastMessage && existing.lastMessage === 'بدء المحادثة...')) {
+            phoneMap.set(cleanKey, item);
+          }
+        }
+      });
+
+      const chatsData = Array.from(phoneMap.values());
       
       // إشعارات للرسائل والعملاء الجدد
       if (!isFirstLoad.current) {
