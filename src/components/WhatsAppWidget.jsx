@@ -886,7 +886,9 @@ export default function WhatsAppWidget() {
         lastMsgText: textToSend.trim() || (mediaToSend ? '📎 مرفق' : ''),
         lastMsgTime: new Date().toISOString(),
         updatedAt: serverTimestamp(),
-        unreadCountStaff: (messages.length || 0) + 1
+        unreadCountStaff: (messages.length || 0) + 1,
+        readBy: [],
+        lastMessageFrom: 'user'
       }, { merge: true });
 
       const regCustomerDocRef = doc(db, 'بيانات_تسجيل_العملاء', cleanPhone);
@@ -898,6 +900,9 @@ export default function WhatsAppWidget() {
         source: 'website_whatsapp',
         addedBy: 'WhatsApp Webhook',
         unread: 1,
+        unreadCount: 1,
+        readBy: [],
+        lastMessageFrom: 'user',
         lastMessage: textToSend.trim() || (mediaToSend ? '📎 مرفق' : ''),
         timestamp: serverTimestamp()
       }, { merge: true });
@@ -907,6 +912,10 @@ export default function WhatsAppWidget() {
         name: userName || 'عميل اتجاه',
         source: 'website_whatsapp',
         addedBy: 'WhatsApp Webhook',
+        unread: 1,
+        unreadCount: 1,
+        readBy: [],
+        lastMessageFrom: 'user',
         lastComment: textToSend.trim() || (mediaToSend ? '📎 مرفق' : ''),
         updatedAt: serverTimestamp()
       }, { merge: true });
