@@ -380,6 +380,25 @@ export default function WhatsAppWidget() {
 
   // Trigger all notification alerts (sound, push, title flasher, favicon badge, in-app toast)
   const triggerNotifications = (msgText) => {
+    const isEmpLogged = typeof window !== 'undefined' && localStorage.getItem('isEmpLoggedIn') === 'true';
+    const alias = (localStorage.getItem('empAliasName') || '').toLowerCase();
+    const title = (localStorage.getItem('empTitle') || '').toLowerCase();
+    const code = (localStorage.getItem('empCode') || '').toLowerCase();
+    const visitor = (localStorage.getItem('visitorName') || '').toLowerCase();
+
+    const isAdmin = isEmpLogged && (
+      alias.includes('إدارة') || alias.includes('ادارة') || alias.includes('admin') || 
+      title.includes('إدارة') || title.includes('ادارة') || title.includes('مدير') || title.includes('أدمن') || title.includes('ادمن') ||
+      code === 'admin' || visitor.includes('إدارة') || visitor.includes('ادارة')
+    );
+
+    const isNonAdminEmp = isEmpLogged && !isAdmin;
+
+    // Suppress title flasher, red favicon badge, desktop push notification & toast for non-admin employees
+    if (isNonAdminEmp) {
+      return;
+    }
+
     playChimeSound();
     triggerBrowserNotification(msgText);
 
@@ -1406,8 +1425,8 @@ export default function WhatsAppWidget() {
             <MessageCircle size={22} className="animate-bounce shrink-0" />
             <span className="text-xs tracking-wide whitespace-nowrap">تواصل معنا</span>
             
-            {/* Red Notification Badge */}
-            {hasUnread && (
+            {/* Red Notification Badge (Visible for Visitors and Admin, Hidden for Non-Admin Employees) */}
+            {hasUnread && (!isEmpLogged || isAdminLoggedIn) && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-white text-[9px] font-bold items-center justify-center">!</span>
