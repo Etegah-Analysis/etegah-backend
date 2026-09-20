@@ -367,11 +367,44 @@ export default function Navbar() {
           <span className="mobile-logo-text">اتجاه للتحليل الذكي</span>
         </Link>
 
-        {/* Top bar right section: Bell + User/Emp badge + Hamburger Menu */}
+        {/* Navigation Links (Center in RTL) */}
+        <div className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+          <Link to="/" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+            الرئيسية
+          </Link>
+          <Link to="/platform-videos" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+            فيديوهات المنصة والنتائج السابقة
+          </Link>
+          <Link to="/news" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+            أخبار السوق السعودي
+          </Link>
+          <Link to="/us-options" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+            أخبار السوق الأمريكي
+          </Link>
+
+          {/* Logout button inside Mobile Drawer when screen is <= 992px */}
+          <div className="user-section-mobile md:hidden">
+            {isLoggedIn ? (
+              <button onClick={handleLogout} className="px-3 py-1.5 rounded-xl bg-rose-950/60 backdrop-blur-xl border border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-900/80 font-bold transition text-xs flex items-center gap-1 cursor-pointer shadow-sm">
+                <LogOut size={14} /> خروج
+              </button>
+            ) : (
+              <Link 
+                to="/visitor-login" 
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-[0_4px_15px_rgba(6,182,212,0.3)] border border-cyan-300/40 transition" 
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                تسجيل الدخول
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Top bar left section (RTL): Bell + User/Emp badge + Desktop Logout + Hamburger Menu */}
         <div className="mobile-controls flex items-center gap-2">
           {isLoggedIn && (
             <div className="flex items-center gap-2">
-              {/* ALWAYS VISIBLE Single Notification Bell Button in Top Bar next to User Badge */}
+              {/* ALWAYS VISIBLE Single Notification Bell Button */}
               <div className="relative" ref={notifRef}>
                 <button
                   onClick={toggleNotifications}
@@ -475,6 +508,23 @@ export default function Navbar() {
               )}
             </div>
           )}
+
+          {/* Desktop Logout Button */}
+          <div className="hidden lg:flex items-center">
+            {isLoggedIn ? (
+              <button onClick={handleLogout} className="px-3 py-1.5 rounded-xl bg-rose-950/60 backdrop-blur-xl border border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-900/80 font-bold transition text-xs flex items-center gap-1 cursor-pointer shadow-sm">
+                <LogOut size={14} /> خروج
+              </button>
+            ) : (
+              <Link 
+                to="/visitor-login" 
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-[0_4px_15px_rgba(6,182,212,0.3)] border border-cyan-300/40 transition" 
+              >
+                تسجيل الدخول
+              </Link>
+            )}
+          </div>
+
           <button 
             className="mobile-toggle-btn" 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -482,40 +532,6 @@ export default function Navbar() {
           >
             {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-        </div>
-
-        {/* Navigation Links */}
-        <div className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-          <Link to="/" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
-            الرئيسية
-          </Link>
-          <Link to="/platform-videos" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
-            فيديوهات المنصة والنتائج السابقة
-          </Link>
-          <Link to="/news" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
-            أخبار السوق السعودي
-          </Link>
-          <Link to="/us-options" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
-            أخبار السوق الأمريكي
-          </Link>
-
-          <div className="user-section-mobile">
-            {isLoggedIn ? (
-              <div className="user-badge-box flex items-center gap-2">
-                <button onClick={handleLogout} className="px-3 py-1.5 rounded-xl bg-rose-950/60 backdrop-blur-xl border border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-900/80 font-bold transition text-xs flex items-center gap-1 cursor-pointer shadow-sm">
-                  <LogOut size={14} /> خروج
-                </button>
-              </div>
-            ) : (
-              <Link 
-                to="/visitor-login" 
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-[0_4px_15px_rgba(6,182,212,0.3)] border border-cyan-300/40 transition" 
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                تسجيل الدخول
-              </Link>
-            )}
-          </div>
         </div>
       </div>
     </nav>
