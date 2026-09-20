@@ -8934,10 +8934,12 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
     setPdfReportModalMarket(market);
   };
 
-  const handleAutoPublishRecommendationsPdf = async (marketType = 'saudi') => {
+  const handleAutoPublishRecommendationsPdf = async (targetMarket) => {
+    const marketType = (targetMarket === 'us' || targetMarket === 'us_latest') ? 'us' : 'saudi';
     const isSaudi = marketType === 'saudi';
     const marketTitle = isSaudi ? 'السوق السعودي 🇸🇦' : 'السوق الأمريكي 🇺🇸';
     const docId = isSaudi ? 'saudi_latest' : 'us_latest';
+    const docIdAlt = isSaudi ? 'saudi' : 'us';
     const userRole = isAdmin ? '👑 الإدارة' : (currentEmpUser?.name || 'محلل المنصة');
     const list = isSaudi ? saudiRecommendations : usRecommendations;
     const title = isSaudi ? 'تقرير توصيات السوق السعودي' : 'تقرير توصيات السوق الأمريكي';
@@ -9079,6 +9081,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
       };
 
       await setDoc(doc(db, 'weekly_reports', docId), reportPayload, { merge: true });
+      await setDoc(doc(db, 'weekly_reports', docIdAlt), reportPayload, { merge: true });
       await addDoc(collection(db, 'weekly_reports_history'), reportPayload).catch(() => {});
 
       await addDoc(collection(db, 'platform_notifications'), {

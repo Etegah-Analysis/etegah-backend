@@ -2,7 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, MessageCircle, Bell, ShieldCheck, Trash2 } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, where, orderBy, limit, onSnapshot, doc, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, doc, getDocs, getDoc } from 'firebase/firestore';
+import { toast } from 'react-hot-toast';
 import logoImg from '../assets/logo.jpg';
 
 export default function Navbar() {
@@ -90,6 +91,41 @@ export default function Navbar() {
       unsubChat();
       unsubMsgs();
     };
+  }, [visitorPhone]);
+
+  // Real-time visitor account status check (Instant automatic logout when deleted from control panel / Card 4)
+  useEffect(() => {
+    const phone = localStorage.getItem('visitorPhone');
+    const isEmpLogged = localStorage.getItem('isEmpLoggedIn') === 'true';
+    if (!phone || isEmpLogged) return;
+
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (!cleanPhone) return;
+
+    const visDocRef = doc(db, 'visitor_customers', cleanPhone);
+    const unsubVis = onSnapshot(visDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.isLoggedOut === true || data.status === 'deleted' || data.isDeleted === true) {
+          localStorage.removeItem('visitorPhone');
+          localStorage.removeItem('visitorName');
+          toast.error('تم تسجيل الخروج تلقائياً نظراً لحذف حسابك من قِبل الإدارة ⚠️');
+          window.location.href = '/visitor-login';
+        }
+      } else {
+        const custDocRef = doc(db, 'بيانات_تسجيل_العملاء', cleanPhone);
+        getDoc(custDocRef).then((cSnap) => {
+          if (!cSnap.exists() || cSnap.data()?.status === 'deleted' || cSnap.data()?.isLoggedOut === true || cSnap.data()?.isDeleted === true) {
+            localStorage.removeItem('visitorPhone');
+            localStorage.removeItem('visitorName');
+            toast.error('تم تسجيل الخروج تلقائياً نظراً لحذف حسابك من قِبل الإدارة ⚠️');
+            window.location.href = '/visitor-login';
+          }
+        }).catch(() => {});
+      }
+    });
+
+    return () => unsubVis();
   }, [visitorPhone]);
 
   // 3. Real-time broadcast listener for platform PDF reports, videos & notifications

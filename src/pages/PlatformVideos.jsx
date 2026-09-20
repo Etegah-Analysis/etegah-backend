@@ -18,10 +18,11 @@ export default function PlatformVideos() {
       const reportsMap = { saudi: null, us: null };
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
-        if (data.market === 'saudi' || docSnap.id === 'saudi_latest') {
-          reportsMap.saudi = data;
-        } else if (data.market === 'us' || docSnap.id === 'us_latest') {
-          reportsMap.us = data;
+        if (data.market === 'saudi' || docSnap.id === 'saudi_latest' || docSnap.id === 'saudi') {
+          if (data.pdfUrl || !reportsMap.saudi) reportsMap.saudi = data;
+        }
+        if (data.market === 'us' || docSnap.id === 'us_latest' || docSnap.id === 'us') {
+          if (data.pdfUrl || !reportsMap.us) reportsMap.us = data;
         }
       });
       setReports(reportsMap);
