@@ -387,10 +387,10 @@ export default function PlatformVideos() {
               {(() => {
                 const url = selectedPdfReport.pdfUrl || '';
                 const isBase64 = url.startsWith('data:');
-                const isHtml = url.startsWith('data:text/html') || url.includes('.html');
-                const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+                const isDataHtml = url.startsWith('data:text/html') || url.includes('.html') || url.includes('text/html');
+                const isDirectHtml = url.includes('.html') || isDataHtml || !url.toLowerCase().includes('.pdf');
 
-                if (isHtml || isBase64) {
+                if (isDirectHtml || isBase64) {
                   return (
                     <iframe
                       src={url}
@@ -400,6 +400,7 @@ export default function PlatformVideos() {
                   );
                 }
 
+                const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
                 return (
                   <iframe
                     src={googleViewerUrl}
