@@ -60,7 +60,10 @@ export default async function handler(req, res) {
         timestamp: FieldValue.serverTimestamp(),
         lastMessage: MediaUrl0 ? '📎 أرسل ملفاً' : Body,
         lastMessageTime: FieldValue.serverTimestamp(),
+        lastMessageFrom: 'user',
+        readBy: [],
         unreadCount: 1,
+        unread: 1,
         source: 'whatsapp'
       };
       userDocRef = await usersRef.add(newUser);
@@ -68,13 +71,16 @@ export default async function handler(req, res) {
     } else {
       userDocRef = snapshot.docs[0].ref;
       const userData = snapshot.docs[0].data();
-      const newUnread = (userData.unreadCount || 0) + 1;
+      const newUnread = (userData.unreadCount || userData.unread || 0) + 1;
       
       // Update last message and unread count
       await userDocRef.update({
         lastMessage: MediaUrl0 ? '📎 أرسل ملفاً' : Body,
         lastMessageTime: FieldValue.serverTimestamp(),
-        unreadCount: newUnread
+        lastMessageFrom: 'user',
+        readBy: [],
+        unreadCount: newUnread,
+        unread: newUnread
       });
       console.log(`Updated existing chat document for ${phoneNumber}`);
     }
