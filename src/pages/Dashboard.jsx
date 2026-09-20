@@ -17233,7 +17233,6 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                         >
                           <option value="all">🎯 جميع الحالات</option>
                           <option value="unassigned">⏳ في الانتظار (غير مسند)</option>
-                          <option value="website_visitor">🌐 مسجل OTP</option>
                           <option value="call_back">📞 Call Back / تم التواصل والرد</option>
                           <option value="interested">⭐ Interested / مهتم بالاشتراك</option>
                           <option value="not_interested">❌ Not Interested / غير مهتم حالياً</option>
