@@ -395,7 +395,7 @@ export default function Navbar() {
                 {/* Dropdown Menu (Mobile) */}
                 {isNotifOpen && (
                   <div 
-                    className="absolute left-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
+                    className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
                     dir="rtl"
                   >
                     <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
@@ -514,7 +514,7 @@ export default function Navbar() {
                   {/* Dropdown Menu (Desktop) */}
                   {isNotifOpen && (
                     <div 
-                      className="absolute left-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
+                      className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
                       dir="rtl"
                     >
                       <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
