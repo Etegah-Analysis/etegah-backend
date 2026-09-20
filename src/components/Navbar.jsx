@@ -271,9 +271,7 @@ export default function Navbar() {
         (notifRef.current && notifRef.current.contains(event.target)) ||
         (notifMobileRef.current && notifMobileRef.current.contains(event.target));
 
-      const isClickInsideDropdown = event.target.closest && event.target.closest('.notif-dropdown-container');
-
-      if (!isClickInsideBell && !isClickInsideDropdown) {
+      if (!isClickInsideBell) {
         setIsNotifOpen(false);
       }
     };
@@ -379,7 +377,7 @@ export default function Navbar() {
         <div className="mobile-controls flex items-center gap-2">
           {isLoggedIn && (
             <div className="flex items-center gap-1.5">
-              {/* Notification Bell (Mobile Button) */}
+              {/* Notification Bell (Mobile Button & Directly Attached Dropdown) */}
               <div className="relative" ref={notifMobileRef}>
                 <button
                   onClick={toggleNotifications}
@@ -393,6 +391,73 @@ export default function Navbar() {
                     </span>
                   )}
                 </button>
+
+                {/* Dropdown Menu (Mobile) - Directly attached under mobile bell */}
+                {isNotifOpen && (
+                  <div 
+                    className="absolute left-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
+                    dir="rtl"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
+                      <span className="font-extrabold text-cyan-300 flex items-center gap-1 text-[11px]">
+                        <Bell size={14} className="text-cyan-400" /> إشعارات الرسائل الواردة
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-gray-400 font-mono">({notifications.length})</span>
+                        {notifications.length > 0 && (
+                          <button
+                            onClick={handleClearAllNotifications}
+                            className="text-[10px] text-rose-300 hover:text-rose-100 bg-rose-950/70 hover:bg-rose-900 border border-rose-500/30 px-1.5 py-0.5 rounded-md transition cursor-pointer flex items-center gap-0.5"
+                            title="تصفير ومسح الإشعارات"
+                          >
+                            <Trash2 size={10} /> تحديد الكل كمقروء 🧹
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                      {notifications.map((msg) => (
+                        <div
+                          key={msg.id}
+                          onClick={() => handleOpenNotificationMessage(msg.id)}
+                          className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-950/40 border border-white/5 hover:border-cyan-500/30 transition cursor-pointer"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-white text-[11px] flex items-center gap-1">
+                              {msg.isPlatformNotif ? (msg.type === 'pdf_report' ? '📄 ' : '🎥 ') : null}
+                              {msg.senderName || (msg.sender === 'admin' ? '👑 الإدارة' : (empAliasName || 'خدمة العملاء'))}
+                            </span>
+                            <span className="text-[9px] text-cyan-400 font-mono shrink-0">
+                              {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '')}
+                            </span>
+                          </div>
+                          <p className="text-gray-300 text-[11px] line-clamp-2 dir-auto">
+                            {msg.text || (msg.mediaUrl ? '📎 مرفق ملف' : 'رسالة جديدة')}
+                          </p>
+                        </div>
+                      ))}
+
+                      {notifications.length === 0 && (
+                        <div className="py-6 text-center text-gray-400 text-[11px]">
+                          لا توجد إشعارات جديدة حالياً ✨
+                        </div>
+                      )}
+                    </div>
+
+                    {notifications.length > 0 && !isEmp && (
+                      <button
+                        onClick={() => {
+                          handleOpenChat();
+                          setIsNotifOpen(false);
+                        }}
+                        className="w-full mt-2 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-center text-[11px] hover:from-cyan-400 hover:to-blue-500 transition cursor-pointer shadow-md active:scale-95"
+                      >
+                        فتح المحادثة الكاملة 💬
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <span 
@@ -431,7 +496,7 @@ export default function Navbar() {
           <div className="user-section-mobile">
             {isLoggedIn ? (
               <div className="user-badge-box flex items-center gap-2 relative">
-                {/* Notification Bell (Desktop Button) */}
+                {/* Notification Bell (Desktop Button & Directly Attached Dropdown) */}
                 <div className="relative" ref={notifRef}>
                   <button
                     onClick={toggleNotifications}
@@ -445,6 +510,73 @@ export default function Navbar() {
                       </span>
                     )}
                   </button>
+
+                  {/* Dropdown Menu (Desktop) - Directly attached under desktop bell */}
+                  {isNotifOpen && (
+                    <div 
+                      className="absolute left-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
+                      dir="rtl"
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
+                        <span className="font-extrabold text-cyan-300 flex items-center gap-1 text-[11px]">
+                          <Bell size={14} className="text-cyan-400" /> إشعارات الرسائل الواردة
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-gray-400 font-mono">({notifications.length})</span>
+                          {notifications.length > 0 && (
+                            <button
+                              onClick={handleClearAllNotifications}
+                              className="text-[10px] text-rose-300 hover:text-rose-100 bg-rose-950/70 hover:bg-rose-900 border border-rose-500/30 px-1.5 py-0.5 rounded-md transition cursor-pointer flex items-center gap-0.5"
+                              title="تصفير ومسح الإشعارات"
+                            >
+                              <Trash2 size={10} /> تحديد الكل كمقروء 🧹
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="max-h-60 sm:max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                        {notifications.map((msg) => (
+                          <div
+                            key={msg.id}
+                            onClick={() => handleOpenNotificationMessage(msg.id)}
+                            className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-950/40 border border-white/5 hover:border-cyan-500/30 transition cursor-pointer"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-white text-[11px] flex items-center gap-1">
+                                {msg.isPlatformNotif ? (msg.type === 'pdf_report' ? '📄 ' : '🎥 ') : null}
+                                {msg.senderName || (msg.sender === 'admin' ? '👑 الإدارة' : (empAliasName || 'خدمة العملاء'))}
+                              </span>
+                              <span className="text-[9px] text-cyan-400 font-mono shrink-0">
+                                {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '')}
+                              </span>
+                            </div>
+                            <p className="text-gray-300 text-[11px] line-clamp-2 dir-auto">
+                              {msg.text || (msg.mediaUrl ? '📎 مرفق ملف' : 'رسالة جديدة')}
+                            </p>
+                          </div>
+                        ))}
+
+                        {notifications.length === 0 && (
+                          <div className="py-6 text-center text-gray-400 text-[11px]">
+                            لا توجد إشعارات جديدة حالياً ✨
+                          </div>
+                        )}
+                      </div>
+
+                      {notifications.length > 0 && !isEmp && (
+                        <button
+                          onClick={() => {
+                            handleOpenChat();
+                            setIsNotifOpen(false);
+                          }}
+                          className="w-full mt-2 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-center text-[11px] hover:from-cyan-400 hover:to-blue-500 transition cursor-pointer shadow-md active:scale-95"
+                        >
+                          فتح المحادثة الكاملة 💬
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* User / Employee Badge Button */}
@@ -483,73 +615,6 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-
-      {/* SINGLE UNIFIED NOTIFICATION DROPDOWN MENU */}
-      {isNotifOpen && (
-        <div 
-          className="notif-dropdown-container fixed top-16 left-3 right-3 sm:left-auto sm:right-6 sm:w-80 bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3.5 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
-          dir="rtl"
-        >
-          <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
-            <span className="font-extrabold text-cyan-300 flex items-center gap-1.5 text-xs">
-              <Bell size={14} className="text-cyan-400" /> مركز الإشعارات والتنبيهات
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-cyan-400 font-mono">({notifications.length})</span>
-              {notifications.length > 0 && (
-                <button
-                  onClick={handleClearAllNotifications}
-                  className="text-[10px] text-rose-300 hover:text-rose-100 bg-rose-950/70 hover:bg-rose-900 border border-rose-500/30 px-2 py-0.5 rounded-md transition cursor-pointer flex items-center gap-0.5"
-                  title="تصفير ومسح الإشعارات"
-                >
-                  <Trash2 size={10} /> مسح 🧹
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {notifications.map((msg) => (
-              <div
-                key={msg.id}
-                onClick={() => handleOpenNotificationMessage(msg.id)}
-                className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-950/40 border border-white/5 hover:border-cyan-500/30 transition cursor-pointer"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-white text-[11px] flex items-center gap-1">
-                    {msg.isPlatformNotif ? (msg.type === 'pdf_report' ? '📄 ' : '🎥 ') : null}
-                    {msg.senderName || (msg.sender === 'admin' ? '👑 الإدارة' : (empAliasName || 'خدمة العملاء'))}
-                  </span>
-                  <span className="text-[9px] text-cyan-400 font-mono shrink-0">
-                    {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '')}
-                  </span>
-                </div>
-                <p className="text-gray-300 text-[11px] line-clamp-2 dir-auto">
-                  {msg.text || (msg.mediaUrl ? '📎 مرفق ملف' : 'رسالة جديدة')}
-                </p>
-              </div>
-            ))}
-
-            {notifications.length === 0 && (
-              <div className="py-6 text-center text-gray-400 text-[11px]">
-                لا توجد إشعارات جديدة حالياً ✨
-              </div>
-            )}
-          </div>
-
-          {notifications.length > 0 && !isEmp && (
-            <button
-              onClick={() => {
-                handleOpenChat();
-                setIsNotifOpen(false);
-              }}
-              className="w-full mt-2 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-center text-[11px] hover:from-cyan-400 hover:to-blue-500 transition cursor-pointer shadow-md active:scale-95"
-            >
-              فتح المحادثة الكاملة 💬
-            </button>
-          )}
-        </div>
-      )}
     </nav>
   );
 }
