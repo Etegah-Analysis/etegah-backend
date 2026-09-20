@@ -45,12 +45,19 @@ export default function Inbox() {
     setTouchEnd(e.targetTouches[0].clientX);
   };
 
+  const closeActiveChat = useCallback(() => {
+    setActiveChat(null);
+    try {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (_) {}
+  }, []);
+
   const onTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const distance = touchStart - touchEnd;
     // السحب لليمين (نفس اتجاه سهم الرجوع في اللغة العربية)
     if (distance < -50) {
-      setActiveChat(null);
+      closeActiveChat();
     }
   };
 
@@ -496,7 +503,7 @@ export default function Inbox() {
 
         <div 
           className="flex-1 overflow-y-auto relative cursor-pointer"
-          onClick={() => setActiveChat(null)}
+          onClick={closeActiveChat}
         >
           {chats.length === 0 ? (
             <div className="text-center text-gray-400 p-8 flex flex-col items-center relative z-10">
@@ -585,7 +592,7 @@ export default function Inbox() {
           <>
             <div className="bg-black/30 backdrop-blur-xl p-4 border-b border-white/10 flex justify-between items-center shadow-sm z-10 relative">
               <div className="flex items-center space-x-3 space-x-reverse">
-                <button onClick={() => setActiveChat(null)} className="md:hidden text-gray-300 ml-1 hover:text-white">
+                <button onClick={closeActiveChat} className="md:hidden text-gray-300 ml-1 hover:text-white">
                   <ChevronRight size={28} />
                 </button>
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-gray-200 font-bold shrink-0">
@@ -597,7 +604,7 @@ export default function Inbox() {
                 </div>
               </div>
               <button 
-                onClick={() => setActiveChat(null)} 
+                onClick={closeActiveChat} 
                 className="hidden md:flex items-center justify-center text-gray-300 hover:text-red-400 bg-white/10 hover:bg-white/20 border border-white/10 transition p-2 rounded-full shadow-sm"
                 title="إغلاق المحادثة"
               >
@@ -609,7 +616,6 @@ export default function Inbox() {
               key={activeChat.id}
               ref={messagesContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10 cursor-pointer scroll-smooth"
-              onClick={() => setActiveChat(null)}
             >
               {messages.length === 0 ? (
                 <div className="text-center text-gray-400 text-sm mt-10">لا توجد رسائل سابقة.</div>

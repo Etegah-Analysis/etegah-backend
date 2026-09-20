@@ -386,17 +386,16 @@ export default function PlatformVideos() {
               {(() => {
                 const url = selectedPdfReport.pdfUrl || '';
                 const isBase64 = url.startsWith('data:');
+                const isHtml = url.startsWith('data:text/html') || url.includes('.html');
                 const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
 
-                if (isBase64) {
+                if (isHtml || isBase64) {
                   return (
-                    <object
-                      data={url}
-                      type="application/pdf"
-                      className="w-full h-full min-h-[60vh] sm:min-h-[70vh] rounded-2xl border border-cyan-500/20 shadow-inner bg-slate-900"
-                    >
-                      <embed src={url} type="application/pdf" className="w-full h-full min-h-[60vh] sm:min-h-[70vh] rounded-2xl" />
-                    </object>
+                    <iframe
+                      src={url}
+                      className="w-full h-full min-h-[60vh] sm:min-h-[70vh] rounded-2xl border border-cyan-500/20 shadow-inner bg-white"
+                      title="معاينة التقرير"
+                    />
                   );
                 }
 
