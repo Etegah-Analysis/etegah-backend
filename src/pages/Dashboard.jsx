@@ -458,6 +458,7 @@ const Dashboard = () => {
   const [employeeLeads, setEmployeeLeads] = useState(() => getInitialCache('cache_employeeLeads', []));
   const [employees, setEmployees] = useState(() => getInitialCache('cache_employees', []));
   const [visitors, setVisitors] = useState(() => getInitialCache('cache_visitors', []));
+  const [websiteChats, setWebsiteChats] = useState([]);
   const [recycleBin, setRecycleBin] = useState([]);
   const [rbFilter, setRbFilter] = useState('all');
   const [templateMessages, setTemplateMessages] = useState([]);
@@ -1668,15 +1669,46 @@ const Dashboard = () => {
       });
     }
 
+    if (websiteChats && websiteChats.length > 0) {
+      websiteChats.forEach(wc => {
+        const wcPhoneNorm = normalizePhone(wc.phoneNumber || wc.cleanPhone || wc.phone || wc.id);
+        const existingIdx = allCandidateCustomerChats.findIndex(c => c.id === wc.id || (wcPhoneNorm && normalizePhone(c.phoneNumber || c.phone || c.id) === wcPhoneNorm));
+        
+        const wcUnread = Number(wc.unreadCountStaff) || Number(wc.unread) || 0;
+        if (existingIdx === -1) {
+          allCandidateCustomerChats.push({
+            ...wc,
+            phoneNumber: wc.phoneNumber || wc.cleanPhone,
+            name: wc.name || wc.clientName || 'عميل اتجاه',
+            unread: wcUnread > 0 ? wcUnread : 1,
+            lastMessage: wc.lastMsgText || wc.lastMessage || 'وصلت رسالة موقع جديدة',
+            lastMessageFrom: 'user',
+            source: 'website_whatsapp',
+            addedBy: 'website_whatsapp'
+          });
+        } else {
+          const existing = allCandidateCustomerChats[existingIdx];
+          const exUnread = Number(existing.unread) || 0;
+          const mergedUnread = Math.max(exUnread, wcUnread);
+          if (wcUnread > 0 || wc.lastMsgText) {
+            allCandidateCustomerChats[existingIdx] = {
+              ...existing,
+              ...wc,
+              unread: mergedUnread > 0 ? mergedUnread : existing.unread,
+              lastMessage: wc.lastMsgText || existing.lastMessage || 'رسالة جديدة',
+              lastMessageFrom: 'user',
+              readBy: (wcUnread > 0 && exUnread === 0) ? [] : existing.readBy
+            };
+          }
+        }
+      });
+    }
+
     // A. Filter Customer Chats strictly by Employee Role & Assigned Scope (Admin sees all, Leader sees team, Agent sees assigned)
     const filteredCustomerChats = allCandidateCustomerChats.filter(c => {
       const currentKey = getItemMsgKey(c);
       const savedDismissedKey = dismissedNotifMap[c.id];
-      if (savedDismissedKey) {
-        if (savedDismissedKey === currentKey || (Number(c.unread) === 0 && c.unread !== true)) {
-          return false;
-        }
-      } else if (dismissedNotifIds.includes(c.id) && (Number(c.unread) === 0 && c.unread !== true)) {
+      if (savedDismissedKey && (savedDismissedKey === currentKey || savedDismissedKey === 'dismissed')) {
         return false;
       }
 
@@ -1695,9 +1727,11 @@ const Dashboard = () => {
         c.lastSender === 'user' || 
         c.lastMessageSender === 'user' || 
         c.lastMessageSenderType === 'user' ||
+        c.sender === 'client' ||
         c.source === 'website' || 
         c.source === 'website_otp' || 
-        c.addedBy === 'website_otp'
+        c.addedBy === 'website_otp' ||
+        c.source === 'website_whatsapp'
       );
 
       // Must NOT be outgoing system/bot/me broadcast without user reply
@@ -1707,10 +1741,11 @@ const Dashboard = () => {
         c.lastMessageFrom === 'system' || 
         c.lastMessageFrom === 'bot' || 
         c.lastSender === 'me' || 
-        c.lastSender === 'agent'
+        c.lastSender === 'agent' ||
+        c.lastMessageFrom === 'emp'
       );
 
-      const hasUnread = (Number(c.unread) > 0 || c.unread === true || isIncomingMsg) && !isOutgoingOnly;
+      const hasUnread = (Number(c.unread) > 0 || Number(c.unreadCountStaff) > 0 || c.unread === true || isIncomingMsg) && !isOutgoingOnly;
       if (!hasUnread) return false;
 
       // 1. Admin receives all customer chats
@@ -1738,11 +1773,7 @@ const Dashboard = () => {
     const filteredGroups = (internalGroups || []).filter(g => {
       const currentKey = getItemMsgKey(g);
       const savedDismissedKey = dismissedNotifMap[g.id];
-      if (savedDismissedKey) {
-        if (savedDismissedKey === currentKey || (Number(g.unread) === 0 && g.unread !== true)) {
-          return false;
-        }
-      } else if (dismissedNotifIds.includes(g.id) && (Number(g.unread) === 0 && g.unread !== true)) {
+      if (savedDismissedKey && (savedDismissedKey === currentKey || savedDismissedKey === 'dismissed')) {
         return false;
       }
       if (!g.lastMessage) return false;
@@ -1773,7 +1804,7 @@ const Dashboard = () => {
       const timeB = getTimestampMillis(b.updatedAt) || getTimestampMillis(b.createdAt) || 0;
       return timeB - timeA;
     });
-  }, [customers, internalGroups, currentUser, isAdmin, isCoordinator, isLeader, myTeamMembers, dismissedNotifIds, dismissedNotifMap]);
+  }, [customers, visitors, websiteChats, internalGroups, currentUser, isAdmin, isCoordinator, isLeader, myTeamMembers, dismissedNotifIds, dismissedNotifMap]);
 
   const totalUnreadWhatsAppCount = useMemo(() => {
     return unreadWhatsAppChats.reduce((sum, c) => sum + (Number(c.unread) || 1), 0);
@@ -1821,8 +1852,9 @@ const Dashboard = () => {
       const prevKey = prevUnreadMapRef.current[c.id];
       const currentKey = getItemMsgKey(c) || `${c.id}_${c.unread || 1}`;
 
-      if (prevKey !== undefined && prevKey !== currentKey) {
+      if (prevKey !== currentKey) {
         // New incoming message!
+        playNotificationChime();
         playNotificationSound();
         setHasViewedNotifications(false);
         const isWebsiteLead = !c.isGroup && (
@@ -2634,22 +2666,6 @@ const Dashboard = () => {
       }
     });
 
-    return () => {
-      custUnsub();
-      leadsCrmUnsub();
-      empLeadsUnsub();
-      empUnsub();
-      visUnsub();
-      rbUnsub();
-      templatesUnsub();
-      emailsUnsub();
-      groupsUnsub();
-      saudiUnsub();
-      usUnsub();
-      buffetInvUnsub();
-      buffetPurchasesUnsub();
-      buffetConfigUnsub();
-
     // Fetch Employee Payroll Data (v2.25)
     const payrollUnsub = onSnapshot(collection(db, 'employee_payroll'), (snapshot) => {
       const payrollMap = {};
@@ -2666,20 +2682,37 @@ const Dashboard = () => {
       }
     });
 
-    // Fetch Fingerprint Attachments (v2.25)
-    const fpUnsub = onSnapshot(doc(db, 'payroll_settings', 'fingerprint_config'), (docSnap) => {
-      if (docSnap.exists() && Array.isArray(docSnap.data().attachments)) {
-        setFingerprintAttachments(docSnap.data().attachments);
-      } else {
-        const cached = localStorage.getItem('etegah_fingerprint_attachments');
-        if (cached) {
-          try { setFingerprintAttachments(JSON.parse(cached)); } catch(e) {}
-        }
-      }
+    // Fetch Website Chats (v2.27)
+    const webChatsUnsub = onSnapshot(collection(db, 'website_chats'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      data.sort((a, b) => {
+        const timeA = getTimestampMillis(a.updatedAt) || getTimestampMillis(a.lastMsgTime) || 0;
+        const timeB = getTimestampMillis(b.updatedAt) || getTimestampMillis(b.lastMsgTime) || 0;
+        return timeB - timeA;
+      });
+      setWebsiteChats(data);
     }, (error) => {
-      console.error('Error fetching fingerprint config:', error);
+      console.error('Error fetching website_chats:', error);
     });
 
+    return () => {
+      custUnsub();
+      leadsCrmUnsub();
+      empLeadsUnsub();
+      empUnsub();
+      visUnsub();
+      rbUnsub();
+      templatesUnsub();
+      emailsUnsub();
+      groupsUnsub();
+      webChatsUnsub();
+      saudiUnsub();
+      usUnsub();
+      buffetInvUnsub();
+      buffetPurchasesUnsub();
+      buffetConfigUnsub();
+      payrollUnsub();
+      fpUnsub();
     };
   }, []);
 
