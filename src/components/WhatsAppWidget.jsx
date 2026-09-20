@@ -955,8 +955,8 @@ export default function WhatsAppWidget() {
     <>
       {/* Internal Call Ringing active state is integrated into the Notification Center */}
 
-      {/* In-App Floating Toast Alert Banner (Only for Visitors/Customers, Hidden for all Employees) */}
-      {!isEmpLogged && toastAlert && !isOpen && (
+      {/* In-App Floating Toast Alert Banner (Visible for Visitors and Admin, Hidden for Non-Admin Employees) */}
+      {(!isEmpLogged || isAdminLoggedIn) && toastAlert && !isOpen && (
         <div 
           onClick={() => { setIsOpen(true); clearNotifications(); }}
           className="fixed top-20 right-4 sm:right-6 z-[9999] bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-2 border-cyan-400 text-white px-4 py-3 rounded-2xl shadow-[0_10px_35px_rgba(6,182,212,0.5)] flex items-center gap-3 cursor-pointer animate-bounce max-w-sm"
