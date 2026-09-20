@@ -338,22 +338,20 @@ export default function Navbar() {
           {visitorName && (
             <div className="flex items-center gap-1.5">
               {/* Notification Bell (Mobile) */}
-              {!isEmp && (
-                <div className="relative" ref={notifMobileRef}>
-                  <button
-                    onClick={toggleNotifications}
-                    className="p-1.5 rounded-xl bg-slate-900/90 border border-cyan-500/40 text-cyan-300 hover:text-white transition relative cursor-pointer flex items-center justify-center shadow-md"
-                    title="الإشعارات المباشرة"
-                  >
-                    <Bell size={16} className={unreadCount > 0 ? "text-cyan-300 animate-pulse" : "text-gray-400"} />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-md animate-bounce">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              )}
+              <div className="relative" ref={notifMobileRef}>
+                <button
+                  onClick={toggleNotifications}
+                  className="p-1.5 rounded-xl bg-slate-900/90 border border-cyan-500/40 text-cyan-300 hover:text-white transition relative cursor-pointer flex items-center justify-center shadow-md"
+                  title="الإشعارات المباشرة"
+                >
+                  <Bell size={16} className={unreadCount > 0 ? "text-cyan-300 animate-pulse" : "text-gray-400"} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-md animate-bounce">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
 
               <span 
                 onClick={handleOpenChat}
@@ -392,20 +390,19 @@ export default function Navbar() {
             {visitorName ? (
               <div className="user-badge-box flex items-center gap-2 relative">
                 {/* Notification Bell (Desktop) */}
-                {!isEmp && (
-                  <div className="relative" ref={notifRef}>
-                    <button
-                      onClick={toggleNotifications}
-                      className="p-2 rounded-xl bg-slate-900/80 backdrop-blur-xl border border-cyan-500/40 text-cyan-300 hover:text-white font-extrabold flex items-center justify-center shadow-[0_4px_15px_rgba(6,182,212,0.25)] hover:border-cyan-400 transition cursor-pointer relative text-xs sm:text-sm"
-                      title="الإشعارات المباشرة"
-                    >
-                      <Bell size={16} className={unreadCount > 0 ? "text-cyan-300 animate-pulse" : "text-gray-400"} />
-                      {unreadCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-md animate-bounce">
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                      )}
-                    </button>
+                <div className="relative" ref={notifRef}>
+                  <button
+                    onClick={toggleNotifications}
+                    className="p-2 rounded-xl bg-slate-900/80 backdrop-blur-xl border border-cyan-500/40 text-cyan-300 hover:text-white font-extrabold flex items-center justify-center shadow-[0_4px_15px_rgba(6,182,212,0.25)] hover:border-cyan-400 transition cursor-pointer relative text-xs sm:text-sm"
+                    title="الإشعارات المباشرة"
+                  >
+                    <Bell size={16} className={unreadCount > 0 ? "text-cyan-300 animate-pulse" : "text-gray-400"} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-md animate-bounce">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
 
                     {/* Dropdown Menu */}
                     {isNotifOpen && (
@@ -471,7 +468,6 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
-                )}
 
                 {/* User / Employee Badge Button */}
                 {isEmp ? (
