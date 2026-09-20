@@ -377,8 +377,8 @@ export default function Navbar() {
         <div className="mobile-controls flex items-center gap-2">
           {isLoggedIn && (
             <div className="flex items-center gap-1.5">
-              {/* Notification Bell (Mobile Button & Directly Attached Dropdown) */}
-              <div className="relative" ref={notifMobileRef}>
+              {/* Notification Bell (Mobile Button & Attached Dropdown - VISIBLE ONLY ON MOBILE) */}
+              <div className="relative md:hidden" ref={notifMobileRef}>
                 <button
                   onClick={toggleNotifications}
                   className="p-1.5 rounded-xl bg-slate-900/90 border border-cyan-500/40 text-cyan-300 hover:text-white transition relative cursor-pointer flex items-center justify-center shadow-md"
@@ -392,7 +392,7 @@ export default function Navbar() {
                   )}
                 </button>
 
-                {/* Dropdown Menu (Mobile) - Directly attached under mobile bell */}
+                {/* Dropdown Menu (Mobile) */}
                 {isNotifOpen && (
                   <div 
                     className="absolute left-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
@@ -496,8 +496,8 @@ export default function Navbar() {
           <div className="user-section-mobile">
             {isLoggedIn ? (
               <div className="user-badge-box flex items-center gap-2 relative">
-                {/* Notification Bell (Desktop Button & Directly Attached Dropdown) */}
-                <div className="relative" ref={notifRef}>
+                {/* Notification Bell (Desktop Button & Attached Dropdown - VISIBLE ONLY ON DESKTOP) */}
+                <div className="relative hidden md:block" ref={notifRef}>
                   <button
                     onClick={toggleNotifications}
                     className="p-2 rounded-xl bg-slate-900/80 backdrop-blur-xl border border-cyan-500/40 text-cyan-300 hover:text-white font-extrabold flex items-center justify-center shadow-[0_4px_15px_rgba(6,182,212,0.25)] hover:border-cyan-400 transition cursor-pointer relative text-xs sm:text-sm"
@@ -511,7 +511,7 @@ export default function Navbar() {
                     )}
                   </button>
 
-                  {/* Dropdown Menu (Desktop) - Directly attached under desktop bell */}
+                  {/* Dropdown Menu (Desktop) */}
                   {isNotifOpen && (
                     <div 
                       className="absolute left-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
