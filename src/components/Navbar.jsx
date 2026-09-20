@@ -381,26 +381,9 @@ export default function Navbar() {
           <Link to="/us-options" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
             أخبار السوق الأمريكي
           </Link>
-
-          {/* Logout button inside Mobile Drawer when screen is <= 992px */}
-          <div className="user-section-mobile md:hidden">
-            {isLoggedIn ? (
-              <button onClick={handleLogout} className="px-3 py-1.5 rounded-xl bg-rose-950/60 backdrop-blur-xl border border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-900/80 font-bold transition text-xs flex items-center gap-1 cursor-pointer shadow-sm">
-                <LogOut size={14} /> خروج
-              </button>
-            ) : (
-              <Link 
-                to="/visitor-login" 
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-[0_4px_15px_rgba(6,182,212,0.3)] border border-cyan-300/40 transition" 
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                تسجيل الدخول
-              </Link>
-            )}
-          </div>
         </div>
 
-        {/* Top bar left section (RTL): Bell + User/Emp badge + Desktop Logout + Hamburger Menu */}
+        {/* Top bar left section (RTL): Bell + User/Emp badge + Single Left Logout + Hamburger Menu */}
         <div className="mobile-controls flex items-center gap-2">
           {isLoggedIn && (
             <div className="flex items-center gap-2">
@@ -509,8 +492,8 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Desktop Logout Button */}
-          <div className="hidden lg:flex items-center">
+          {/* Single Left Logout Button */}
+          <div className="flex items-center">
             {isLoggedIn ? (
               <button onClick={handleLogout} className="px-3 py-1.5 rounded-xl bg-rose-950/60 backdrop-blur-xl border border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-900/80 font-bold transition text-xs flex items-center gap-1 cursor-pointer shadow-sm">
                 <LogOut size={14} /> خروج
