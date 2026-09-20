@@ -23,7 +23,6 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const notifRef = useRef(null);
-  const notifMobileRef = useRef(null);
   const isInitialNotifMount = useRef(true);
   const prevUnreadNotifCountRef = useRef(0);
 
@@ -266,12 +265,7 @@ export default function Navbar() {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!isNotifOpen) return;
-
-      const isClickInsideBell = 
-        (notifRef.current && notifRef.current.contains(event.target)) ||
-        (notifMobileRef.current && notifMobileRef.current.contains(event.target));
-
-      if (!isClickInsideBell) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
         setIsNotifOpen(false);
       }
     };
@@ -373,29 +367,29 @@ export default function Navbar() {
           <span className="mobile-logo-text">اتجاه للتحليل الذكي</span>
         </Link>
 
-        {/* Mobile top bar right section: User/Emp badge + Bell + Hamburger Menu */}
+        {/* Top bar right section: Bell + User/Emp badge + Hamburger Menu */}
         <div className="mobile-controls flex items-center gap-2">
           {isLoggedIn && (
-            <div className="flex items-center gap-1.5">
-              {/* Notification Bell (Mobile Button & Attached Dropdown - VISIBLE ONLY ON MOBILE) */}
-              <div className="relative md:hidden" ref={notifMobileRef}>
+            <div className="flex items-center gap-2">
+              {/* ALWAYS VISIBLE Single Notification Bell Button in Top Bar next to User Badge */}
+              <div className="relative" ref={notifRef}>
                 <button
                   onClick={toggleNotifications}
-                  className="p-1.5 rounded-xl bg-slate-900/90 border border-cyan-500/40 text-cyan-300 hover:text-white transition relative cursor-pointer flex items-center justify-center shadow-md"
+                  className="p-1.5 sm:p-2 rounded-xl bg-slate-900/90 border border-cyan-500/40 text-cyan-300 hover:text-white transition relative cursor-pointer flex items-center justify-center shadow-md"
                   title="الإشعارات المباشرة"
                 >
                   <Bell size={16} className={unreadCount > 0 ? "text-cyan-300 animate-pulse" : "text-gray-400"} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white shadow-md animate-bounce">
+                    <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-rose-500 text-[9px] sm:text-[10px] font-black text-white shadow-md animate-bounce">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </button>
 
-                {/* Dropdown Menu (Mobile) */}
+                {/* SINGLE UNIFIED DROPDOWN MENU - PERFECTLY CENTERED DIRECTLY UNDER BELL */}
                 {isNotifOpen && (
                   <div 
-                    className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
+                    className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
                     dir="rtl"
                   >
                     <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
@@ -416,7 +410,7 @@ export default function Navbar() {
                       </div>
                     </div>
 
-                    <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                    <div className="max-h-60 sm:max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                       {notifications.map((msg) => (
                         <div
                           key={msg.id}
@@ -460,13 +454,25 @@ export default function Navbar() {
                 )}
               </div>
 
-              <span 
-                onClick={handleOpenChat}
-                className="visitor-badge-mobile relative flex items-center gap-1 cursor-pointer"
-              >
-                {isEmp ? <ShieldCheck size={13} className="text-cyan-400" /> : <User size={13} />} 
-                {displayName}
-              </span>
+              {/* User / Employee Badge Button */}
+              {isEmp ? (
+                <div className="px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-cyan-400/50 text-cyan-300 font-bold flex items-center gap-1.5 shadow-[0_4px_15px_rgba(6,182,212,0.25)] text-xs sm:text-sm">
+                  <ShieldCheck size={15} className="text-cyan-400 shrink-0" />
+                  <span>👨‍💼 {displayName}</span>
+                  <span className="text-[10px] text-cyan-200/80 bg-cyan-950/80 px-1.5 py-0.5 rounded-md border border-cyan-500/30 hidden sm:inline">
+                    {empTitle || 'مستشار مالي'}
+                  </span>
+                </div>
+              ) : (
+                <button 
+                  onClick={handleOpenChat}
+                  className="visitor-badge-mobile relative flex items-center gap-1 cursor-pointer"
+                  title="فتح الواتساب"
+                >
+                  <User size={13} className="text-cyan-400" />
+                  <span>{displayName}</span>
+                </button>
+              )}
             </div>
           )}
           <button 
@@ -495,110 +501,7 @@ export default function Navbar() {
 
           <div className="user-section-mobile">
             {isLoggedIn ? (
-              <div className="user-badge-box flex items-center gap-2 relative">
-                {/* Notification Bell (Desktop Button & Attached Dropdown - VISIBLE ONLY ON DESKTOP) */}
-                <div className="relative hidden md:block" ref={notifRef}>
-                  <button
-                    onClick={toggleNotifications}
-                    className="p-2 rounded-xl bg-slate-900/80 backdrop-blur-xl border border-cyan-500/40 text-cyan-300 hover:text-white font-extrabold flex items-center justify-center shadow-[0_4px_15px_rgba(6,182,212,0.25)] hover:border-cyan-400 transition cursor-pointer relative text-xs sm:text-sm"
-                    title="الإشعارات المباشرة"
-                  >
-                    <Bell size={16} className={unreadCount > 0 ? "text-cyan-300 animate-pulse" : "text-gray-400"} />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-md animate-bounce">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Dropdown Menu (Desktop) */}
-                  {isNotifOpen && (
-                    <div 
-                      className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] bg-slate-950/98 backdrop-blur-2xl border-2 border-cyan-500/50 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] z-[9999] p-3 text-right text-xs animate-in fade-in zoom-in-95 duration-200"
-                      dir="rtl"
-                    >
-                      <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
-                        <span className="font-extrabold text-cyan-300 flex items-center gap-1 text-[11px]">
-                          <Bell size={14} className="text-cyan-400" /> إشعارات الرسائل الواردة
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-gray-400 font-mono">({notifications.length})</span>
-                          {notifications.length > 0 && (
-                            <button
-                              onClick={handleClearAllNotifications}
-                              className="text-[10px] text-rose-300 hover:text-rose-100 bg-rose-950/70 hover:bg-rose-900 border border-rose-500/30 px-1.5 py-0.5 rounded-md transition cursor-pointer flex items-center gap-0.5"
-                              title="تصفير ومسح الإشعارات"
-                            >
-                              <Trash2 size={10} /> تحديد الكل كمقروء 🧹
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="max-h-60 sm:max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                        {notifications.map((msg) => (
-                          <div
-                            key={msg.id}
-                            onClick={() => handleOpenNotificationMessage(msg.id)}
-                            className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-cyan-950/40 border border-white/5 hover:border-cyan-500/30 transition cursor-pointer"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-bold text-white text-[11px] flex items-center gap-1">
-                                {msg.isPlatformNotif ? (msg.type === 'pdf_report' ? '📄 ' : '🎥 ') : null}
-                                {msg.senderName || (msg.sender === 'admin' ? '👑 الإدارة' : (empAliasName || 'خدمة العملاء'))}
-                              </span>
-                              <span className="text-[9px] text-cyan-400 font-mono shrink-0">
-                                {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '')}
-                              </span>
-                            </div>
-                            <p className="text-gray-300 text-[11px] line-clamp-2 dir-auto">
-                              {msg.text || (msg.mediaUrl ? '📎 مرفق ملف' : 'رسالة جديدة')}
-                            </p>
-                          </div>
-                        ))}
-
-                        {notifications.length === 0 && (
-                          <div className="py-6 text-center text-gray-400 text-[11px]">
-                            لا توجد إشعارات جديدة حالياً ✨
-                          </div>
-                        )}
-                      </div>
-
-                      {notifications.length > 0 && !isEmp && (
-                        <button
-                          onClick={() => {
-                            handleOpenChat();
-                            setIsNotifOpen(false);
-                          }}
-                          className="w-full mt-2 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-center text-[11px] hover:from-cyan-400 hover:to-blue-500 transition cursor-pointer shadow-md active:scale-95"
-                        >
-                          فتح المحادثة الكاملة 💬
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* User / Employee Badge Button */}
-                {isEmp ? (
-                  <div className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-cyan-400/50 text-cyan-300 font-bold flex items-center gap-1.5 shadow-[0_4px_15px_rgba(6,182,212,0.25)] text-xs sm:text-sm">
-                    <ShieldCheck size={16} className="text-cyan-400 shrink-0" />
-                    <span>👨‍💼 {displayName}</span>
-                    <span className="text-[10px] text-cyan-200/80 bg-cyan-950/80 px-1.5 py-0.5 rounded-md border border-cyan-500/30">
-                      {empTitle || 'مستشار مالي'}
-                    </span>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={handleOpenChat}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-xl border border-cyan-500/40 text-cyan-300 hover:text-cyan-200 font-extrabold flex items-center gap-1.5 shadow-[0_4px_15px_rgba(6,182,212,0.25)] hover:border-cyan-400 transition cursor-pointer relative text-xs sm:text-sm"
-                    title="فتح الواتساب"
-                  >
-                    <User size={15} className="text-cyan-400 shrink-0" /> 
-                    <span>{displayName}</span>
-                  </button>
-                )}
-
+              <div className="user-badge-box flex items-center gap-2">
                 <button onClick={handleLogout} className="px-3 py-1.5 rounded-xl bg-rose-950/60 backdrop-blur-xl border border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-900/80 font-bold transition text-xs flex items-center gap-1 cursor-pointer shadow-sm">
                   <LogOut size={14} /> خروج
                 </button>
