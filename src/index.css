@@ -221,7 +221,7 @@ body.light-theme .footer-links a:hover {
 }
 
 .mobile-controls {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 8px;
 }
@@ -240,7 +240,7 @@ body.light-theme .footer-links a:hover {
 }
 
 .mobile-toggle-btn {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.1);
@@ -326,7 +326,7 @@ body.light-theme .footer-links a:hover {
 
 /* Mobile Responsive Drawer Drawer */
 @media (max-width: 992px) {
-  .mobile-controls {
+  .mobile-toggle-btn {
     display: flex;
   }
 
