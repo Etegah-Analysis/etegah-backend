@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { collection, query, where, orderBy, limit, onSnapshot, doc, getDocs, getDoc } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import logoImg from '../assets/logo.jpg';
+import { playNotificationChime } from '../utils/notificationBadge';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -23,6 +24,8 @@ export default function Navbar() {
 
   const notifRef = useRef(null);
   const notifMobileRef = useRef(null);
+  const isInitialNotifMount = useRef(true);
+  const prevUnreadNotifCountRef = useRef(0);
 
   // Check login state (Customer vs Employee)
   useEffect(() => {
@@ -188,11 +191,12 @@ export default function Navbar() {
 
   // Merge chat and platform notifications
   useEffect(() => {
-    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : 'guest';
+    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
     const savedReadMsgIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
     const savedReadPlatformIds = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${cleanPhone}`) || '[]');
 
-    const filteredChatMsgs = chatNotifications.filter(m => !savedReadMsgIds.includes(m.id));
+    // For employee accounts, suppress customer WhatsApp chats completely (Employees only get Reports 📄 & Videos 🎥)
+    const filteredChatMsgs = isEmp ? [] : chatNotifications.filter(m => !savedReadMsgIds.includes(m.id));
     const filteredPlatformMsgs = platformNotifications.filter(m => !savedReadPlatformIds.includes(m.id));
 
     const merged = [...filteredChatMsgs, ...filteredPlatformMsgs].sort((a, b) => {
@@ -211,23 +215,27 @@ export default function Navbar() {
       return msgTime > lastReadTime;
     });
 
+    if (!isInitialNotifMount.current && unreadList.length > prevUnreadNotifCountRef.current) {
+      playNotificationChime();
+    }
+    isInitialNotifMount.current = false;
+    prevUnreadNotifCountRef.current = unreadList.length;
+
     setUnreadCount(unreadList.length);
-  }, [chatNotifications, platformNotifications, visitorPhone]);
+  }, [chatNotifications, platformNotifications, visitorPhone, isEmp]);
 
   // Listen to custom window events for clearing notifications
   useEffect(() => {
     const handleUnreadEvent = (e) => {
       if (e.detail && e.detail.hasUnread === false) {
-        if (visitorPhone) {
-          const cleanPhone = visitorPhone.replace(/[^0-9]/g, '');
-          localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
-        }
+        const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
+        localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
         setUnreadCount(0);
       }
     };
     window.addEventListener('etegah_unread_msg', handleUnreadEvent);
     return () => window.removeEventListener('etegah_unread_msg', handleUnreadEvent);
-  }, [visitorPhone]);
+  }, [visitorPhone, isEmp]);
 
   // Click Outside listener to close notifications dropdown
   useEffect(() => {
@@ -252,8 +260,8 @@ export default function Navbar() {
   const toggleNotifications = () => {
     const nextState = !isNotifOpen;
     setIsNotifOpen(nextState);
-    if (nextState && visitorPhone) {
-      const cleanPhone = visitorPhone.replace(/[^0-9]/g, '');
+    if (nextState) {
+      const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
       localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
       setUnreadCount(0);
     }
@@ -261,7 +269,7 @@ export default function Navbar() {
 
   const handleOpenNotificationMessage = (msgId) => {
     const targetMsg = notifications.find(m => m.id === msgId);
-    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : 'guest';
+    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
 
     if (targetMsg?.isPlatformNotif) {
       const savedReadPlatform = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${cleanPhone}`) || '[]');
@@ -272,6 +280,8 @@ export default function Navbar() {
       setNotifications(prev => prev.filter(m => m.id !== msgId));
       setIsNotifOpen(false);
       setIsMobileMenuOpen(false);
+      localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
+      setUnreadCount(prev => Math.max(0, prev - 1));
       navigate(targetMsg.url || '/platform-videos');
       return;
     }
@@ -291,7 +301,7 @@ export default function Navbar() {
   };
 
   const handleClearAllNotifications = () => {
-    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : 'guest';
+    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
     const chatIds = notifications.filter(m => !m.isPlatformNotif).map(m => m.id);
     const platformIds = notifications.filter(m => m.isPlatformNotif).map(m => m.id);
 
