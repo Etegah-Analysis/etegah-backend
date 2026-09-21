@@ -35,7 +35,7 @@ export default function WhatsAppWidget() {
 
   const handleWidgetScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    const isFarFromBottom = scrollHeight - scrollTop - clientHeight > 100;
+    const isFarFromBottom = scrollHeight - scrollTop - clientHeight > 40;
     setShowScrollBottomBtn(isFarFromBottom);
   };
 
@@ -87,6 +87,23 @@ export default function WhatsAppWidget() {
       }, 2000);
     } else {
       toast.error('لم يتم العثور على الرسالة الأصلية في هذه المحادثة');
+    }
+  }, []);
+
+  const handlePasteWidget = useCallback((e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const blob = item.getAsFile();
+        if (blob) {
+          const file = new File([blob], `screenshot_${Date.now()}.png`, { type: blob.type || 'image/png' });
+          setPendingMedia(file);
+          e.preventDefault();
+          break;
+        }
+      }
     }
   }, []);
 
@@ -1292,17 +1309,17 @@ export default function WhatsAppWidget() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Floating Scroll to Bottom Button (3D Glassmorphism) */}
+                {/* Floating Scroll to Bottom Button (3D Glassmorphism - Image 2 Match) */}
                 {showScrollBottomBtn && (
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       scrollToBottomWidget();
                     }}
-                    className="absolute bottom-16 left-4 z-30 bg-slate-900/60 backdrop-blur-xl border border-cyan-400/40 text-cyan-300 hover:text-white hover:bg-slate-900/80 hover:border-cyan-300 p-2.5 rounded-full shadow-[0_8px_25px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.3)] transition-all duration-300 active:scale-95 hover:scale-110 flex items-center justify-center cursor-pointer group"
+                    className="absolute bottom-16 left-4 z-40 w-10 h-10 rounded-full bg-[#080e1e]/90 backdrop-blur-xl border-2 border-cyan-400/60 text-cyan-300 hover:text-white hover:bg-[#0c162d] hover:border-cyan-300 shadow-[0_4px_20px_rgba(6,182,212,0.5),inset_0_1px_2px_rgba(255,255,255,0.3)] transition-all duration-300 active:scale-90 hover:scale-110 flex items-center justify-center cursor-pointer group"
                     title="الانتقال لآخر رسالة في المحادثة"
                   >
-                    <ChevronDown size={18} className="animate-bounce" />
+                    <ChevronDown size={20} className="stroke-[2.5] animate-bounce" />
                   </button>
                 )}
 
@@ -1376,14 +1393,15 @@ export default function WhatsAppWidget() {
                   </button>
 
                   {/* Text Input */}
-                  <input
+                  <textarea
                     ref={inputRef}
-                    type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    onPaste={handlePasteWidget}
                     placeholder="اكتب رسالتك هنا... (اضغط Enter للإرسال)"
-                    className="flex-1 bg-slate-900 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400"
+                    rows={1}
+                    className="flex-1 bg-slate-900 border border-white/20 rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 resize-none min-h-[38px] max-h-28"
                   />
 
                   {/* Send Button */}
