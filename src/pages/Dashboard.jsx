@@ -8451,7 +8451,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
     const winCount = t1Count + t2Count;
     const closedCount = winCount + slCount;
     const activeCount = list.filter(s => s.status !== 'target1' && s.status !== 'target2' && s.status !== 'stop_loss').length;
-    const winRate = closedCount > 0 ? Math.round((winCount / closedCount) * 100) : (total > 0 ? 100 : 0);
+    const winRate = total > 0 ? Math.round((winCount / total) * 100) : 0;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -9061,7 +9061,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
       const winCount = t1Count + t2Count;
       const closedCount = winCount + slCount;
       const activeCount = list.filter(s => s.status !== 'target1' && s.status !== 'target2' && s.status !== 'stop_loss').length;
-      const winRate = closedCount > 0 ? Math.round((winCount / closedCount) * 100) : (total > 0 ? 100 : 0);
+      const winRate = total > 0 ? Math.round((winCount / total) * 100) : 0;
 
       const now = new Date();
       const formattedNow = now.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + ' • ' + now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
@@ -14707,7 +14707,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                 const winCountS = t1S + t2S;
                 const closedS = winCountS + slS;
                 const activeS = saudiRecommendations.filter(s => s.status !== 'target1' && s.status !== 'target2' && s.status !== 'stop_loss').length;
-                const winRateS = closedS > 0 ? Math.round((winCountS / closedS) * 100) : (totalS > 0 ? 100 : 0);
+                const winRateS = totalS > 0 ? Math.round((winCountS / totalS) * 100) : 0;
 
                 return (
                   <div className="p-4 bg-gradient-to-r from-purple-950/40 via-indigo-950/40 to-slate-900/50 border-b border-amber-500/20">
@@ -15179,7 +15179,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                 const winCountU = t1U + t2U;
                 const closedU = winCountU + slU;
                 const activeU = usRecommendations.filter(s => s.status !== 'target1' && s.status !== 'target2' && s.status !== 'stop_loss').length;
-                const winRateU = closedU > 0 ? Math.round((winCountU / closedU) * 100) : (totalU > 0 ? 100 : 0);
+                const winRateU = totalU > 0 ? Math.round((winCountU / totalU) * 100) : 0;
 
                 return (
                   <div className="p-4 bg-gradient-to-r from-purple-950/40 via-indigo-950/40 to-slate-900/50 border-b border-amber-500/20">
