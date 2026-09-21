@@ -8527,9 +8527,9 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
           </thead>
           <tbody>
             ${(() => {
-              const completedList = list.filter(sig => sig.status !== 'active');
+              const completedList = list.filter(sig => sig.status === 'target1' || sig.status === 'target2');
               if (completedList.length === 0) {
-                return `<tr><td colspan="9" style="padding: 15px; text-align: center; color: #64748b; font-weight: bold;">جميع التوصيات الحالية سارية ⏳ (لا توجد توصيات منتهية لعرضها في الجدول)</td></tr>`;
+                return `<tr><td colspan="9" style="padding: 15px; text-align: center; color: #64748b; font-weight: bold;">لا توجد توصيات محققة للأهداف حالياً لعرضها في الجدول</td></tr>`;
               }
               return completedList.map((sig, idx) => {
                 const statusLbl = sig.status === 'target2' ? 'حقق Target 2 🚀' : sig.status === 'target1' ? 'حقق Target 1 🎯' : sig.status === 'stop_loss' ? 'وقف خسارة 🛑' : sig.status === 'cancelled' ? 'ملغاة ❌' : 'سارية ⏳';
@@ -9132,9 +9132,9 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
     </thead>
     <tbody>
       ${(() => {
-        const completedList = list.filter(sig => sig.status !== 'active');
+        const completedList = list.filter(sig => sig.status === 'target1' || sig.status === 'target2');
         if (completedList.length === 0) {
-          return `<tr><td colspan="9" style="padding: 15px; text-align: center; color: #64748b; font-weight: bold;">جميع التوصيات الحالية سارية ⏳ (لا توجد توصيات منتهية لعرضها في الجدول)</td></tr>`;
+          return `<tr><td colspan="9" style="padding: 15px; text-align: center; color: #64748b; font-weight: bold;">لا توجد توصيات محققة للأهداف حالياً لعرضها في الجدول</td></tr>`;
         }
         return completedList.map((sig, idx) => {
           const statusLbl = sig.status === 'target2' ? 'حقق Target 2 🚀' : sig.status === 'target1' ? 'حقق Target 1 🎯' : sig.status === 'stop_loss' ? 'وقف خسارة 🛑' : sig.status === 'cancelled' ? 'ملغاة ❌' : 'سارية ⏳';
