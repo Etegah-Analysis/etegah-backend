@@ -141,15 +141,15 @@ function App() {
           />
           <Route 
             path="/us-options" 
-            element={<VisitorProtectedRoute><PublicLayout><USOptions /></PublicLayout></VisitorProtectedRoute>} 
+            element={<PublicLayout><USOptions /></PublicLayout>} 
           />
           <Route 
             path="/news" 
-            element={<VisitorProtectedRoute><PublicLayout><News /></PublicLayout></VisitorProtectedRoute>} 
+            element={<PublicLayout><News /></PublicLayout>} 
           />
           <Route 
             path="/platform-videos" 
-            element={<VisitorProtectedRoute><PublicLayout><PlatformVideos /></PublicLayout></VisitorProtectedRoute>} 
+            element={<PublicLayout><PlatformVideos /></PublicLayout>} 
           />
         </Routes>
       </BrowserRouter>
