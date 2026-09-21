@@ -3444,57 +3444,81 @@ const Dashboard = () => {
     return `${chatKeys}__${emailKeys}__${subKeys}`;
   }, [unreadWhatsAppChats, unreadEmails, expiringSubscriptions]);
 
-  const prevFingerprintRef = useRef(unreadMessagesFingerprint);
+  const pageMountTimeRef = useRef(Date.now());
+  const prevKnownChatKeysRef = useRef(null);
 
   // تحديث شارة التبويب (Favicon) وإطلاق إشعار نظام حقيقي على شاشة اللابتوب والموبايل بصوت التنبيه
   useEffect(() => {
     setGlobalNotificationAlert(totalAllNotificationsCount, 'CRM WhatsApp Etegah');
 
-    if (isInitialNotifMount.current) {
-      isInitialNotifMount.current = false;
+    const currentChatKeys = new Set(
+      (unreadWhatsAppChats || []).map(c => `${c.id}_${getItemMsgKey(c)}`)
+    );
+
+    // Initial mount: capture existing chats/notifications silently without pushing notifications
+    if (prevKnownChatKeysRef.current === null) {
+      prevKnownChatKeysRef.current = currentChatKeys;
       prevTotalNotifsRef.current = totalAllNotificationsCount;
       prevUnreadChatsRef.current = unreadWhatsAppChats?.length || 0;
       prevUnreadEmailsRef.current = unreadEmails?.length || 0;
       prevExpiringRef.current = expiringSubscriptions?.length || 0;
-      prevFingerprintRef.current = unreadMessagesFingerprint;
       return;
     }
 
-    const hasNewOrUpdatedMessages = unreadMessagesFingerprint !== prevFingerprintRef.current;
+    // Detect TRULY NEW chat messages that arrived AFTER page component was mounted
+    const newChatKeys = Array.from(currentChatKeys).filter(k => !prevKnownChatKeysRef.current.has(k));
+    
+    // Ensure message timestamp is newer than page mount time (ignoring old messages loaded on mount/refresh)
+    const hasFreshWhatsAppMessage = newChatKeys.length > 0 && unreadWhatsAppChats.some(c => {
+      const msgKey = `${c.id}_${getItemMsgKey(c)}`;
+      if (!newChatKeys.includes(msgKey)) return false;
+      const msgTime = c.updatedAt?.toMillis ? c.updatedAt.toMillis() : (c.updatedAt?.seconds ? c.updatedAt.seconds * 1000 : (c.lastMsgTime ? new Date(c.lastMsgTime).getTime() : 0));
+      return msgTime > (pageMountTimeRef.current - 10000); // 10s buffer
+    });
 
-    if (hasNewOrUpdatedMessages || totalAllNotificationsCount > prevTotalNotifsRef.current) {
-      let bodyText = 'وصلك تنبيه جديد في النظام 🔔';
-      let notifUrl = '/dashboard';
+    const hasFreshEmail = (unreadEmails?.length || 0) > prevUnreadEmailsRef.current;
+    const hasFreshExpiringSub = (expiringSubscriptions?.length || 0) > prevExpiringRef.current;
 
-      if ((unreadWhatsAppChats?.length || 0) > 0) {
-        const latestChat = unreadWhatsAppChats[0];
-        const senderName = getClientNameOrPhone(latestChat);
-        const msgText = latestChat?.lastMessage || latestChat?.lastMsgText || 'رسالة جديدة...';
-        bodyText = `💬 رسالة جديدة من (${senderName}): ${msgText}`;
-        notifUrl = '/inbox';
-      } else if ((unreadEmails?.length || 0) > prevUnreadEmailsRef.current) {
-        bodyText = 'وصلك بريد داخلي جديد في Email-Etegah 📬';
-        notifUrl = '/dashboard';
-      } else if ((expiringSubscriptions?.length || 0) > prevExpiringRef.current) {
-        bodyText = 'تنبيه: توجد اشتراكات عملاء قريبة الانتهاء بحاجة للمتابعة ⏰';
-        notifUrl = '/dashboard';
-      }
+    if (hasFreshWhatsAppMessage) {
+      const latestChat = unreadWhatsAppChats[0];
+      const senderName = getClientNameOrPhone(latestChat);
+      const msgText = latestChat?.lastMessage || latestChat?.lastMsgText || 'رسالة جديدة...';
+      const bodyText = `💬 رسالة جديدة من (${senderName}): ${msgText}`;
 
       playNotificationChime();
       triggerNativeNotification({
         title: '🔔 تنبيه جديد - منصة اتجاه',
         body: bodyText,
         icon: '/logo.jpg',
-        url: notifUrl
+        url: '/inbox',
+        tag: 'whatsapp_msg_' + (latestChat?.id || Date.now())
+      });
+    } else if (hasFreshEmail) {
+      playNotificationChime();
+      triggerNativeNotification({
+        title: '🔔 تنبيه جديد - منصة اتجاه',
+        body: 'وصلك بريد داخلي جديد في Email-Etegah 📬',
+        icon: '/logo.jpg',
+        url: '/dashboard',
+        tag: 'email_notif_' + Date.now()
+      });
+    } else if (hasFreshExpiringSub) {
+      playNotificationChime();
+      triggerNativeNotification({
+        title: '🔔 تنبيه جديد - منصة اتجاه',
+        body: 'تنبيه: توجد اشتراكات عملاء قريبة الانتهاء بحاجة للمتابعة ⏰',
+        icon: '/logo.jpg',
+        url: '/dashboard',
+        tag: 'expiring_sub_' + Date.now()
       });
     }
 
+    prevKnownChatKeysRef.current = currentChatKeys;
     prevTotalNotifsRef.current = totalAllNotificationsCount;
     prevUnreadChatsRef.current = unreadWhatsAppChats?.length || 0;
     prevUnreadEmailsRef.current = unreadEmails?.length || 0;
     prevExpiringRef.current = expiringSubscriptions?.length || 0;
-    prevFingerprintRef.current = unreadMessagesFingerprint;
-  }, [totalAllNotificationsCount, unreadWhatsAppChats, unreadEmails, expiringSubscriptions, unreadMessagesFingerprint]);
+  }, [totalAllNotificationsCount, unreadWhatsAppChats, unreadEmails, expiringSubscriptions]);
 
   // Dynamic months extracted from all subscriptions and payment receipts for monthly sales filter
 
@@ -21634,14 +21658,32 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     </div>
 
                     {/* Sidebar Footer Info */}
-                    <div className="p-2 bg-slate-900/60 rounded-xl border border-purple-500/10 text-[10px] text-purple-300/70 text-center">
+                    <div className="p-2 bg-slate-900/60 rounded-xl border border-purple-500/10 text-[10px] text-purple-300/70 text-center flex flex-col gap-1.5">
                       <span>Etegah Secure Internal Mail v1.0</span>
+                      <button 
+                        onClick={() => setIsMailSidebarOpen(false)}
+                        className="w-full py-1.5 px-3 bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 border border-purple-500/30 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                        title="إخفاء القائمة الجانبية ◀"
+                      >
+                        <ChevronRight size={15} />
+                        <span>إخفاء القائمة ◀</span>
+                      </button>
                     </div>
                   </div>
                 )}
 
                 {/* Right Panel: Email List OR Single Email Viewer */}
-                <div className="flex-1 bg-slate-900 flex flex-col overflow-hidden">
+                <div className="flex-1 bg-slate-900 flex flex-col overflow-hidden relative">
+                  {!isMailSidebarOpen && (
+                    <button 
+                      onClick={() => setIsMailSidebarOpen(true)}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-gradient-to-l from-purple-700 via-purple-600 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white py-4 px-2 rounded-l-2xl shadow-2xl border-l-2 border-t-2 border-b-2 border-purple-300/50 flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:px-2.5 active:scale-95 group"
+                      title="إظهار القائمة الجانبية للبريد 📂"
+                    >
+                      <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform text-cyan-300 animate-pulse" />
+                      <span className="text-[11px] font-black [writing-mode:vertical-lr] tracking-widest text-white">القائمة 📂</span>
+                    </button>
+                  )}
                   
                   {/* Single Email Detailed View */}
                   {selectedEmail ? (

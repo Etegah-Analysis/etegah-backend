@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageCircle, X, Send, Headphones, ShieldCheck, Sparkles, 
   Paperclip, Image as ImageIcon, Smile, Maximize2, Minimize2, 
-  Reply, User, Phone, PhoneCall, FileText, Download, CheckCheck, ArrowRight, LogOut
+  Reply, User, Phone, PhoneCall, FileText, Download, CheckCheck, ArrowRight, LogOut, ChevronDown
 } from 'lucide-react';
 import { db, collection, query, where, getDocs, getDoc, doc, setDoc, onSnapshot, serverTimestamp, addDoc } from '../firebase';
 
@@ -31,6 +31,51 @@ export default function WhatsAppWidget() {
   const [pendingMedia, setPendingMedia] = useState(null);
   const [replyToMessage, setReplyToMessage] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
+
+  const handleWidgetScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const isFarFromBottom = scrollHeight - scrollTop - clientHeight > 100;
+    setShowScrollBottomBtn(isFarFromBottom);
+  };
+
+  const scrollToBottomWidget = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const scrollToWidgetMessage = (replyToObj) => {
+    if (!replyToObj) return;
+    let targetEl = null;
+
+    if (replyToObj.id) {
+      targetEl = document.getElementById(`widget-msg-${replyToObj.id}`);
+    }
+
+    if (!targetEl && replyToObj.text) {
+      const allMsgs = chatContainerRef.current?.querySelectorAll('[data-widget-msg-id]');
+      if (allMsgs) {
+        for (const el of allMsgs) {
+          if (el.getAttribute('data-widget-msg-text')?.includes(replyToObj.text) || el.textContent?.includes(replyToObj.text)) {
+            targetEl = el;
+            break;
+          }
+        }
+      }
+    }
+
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetEl.classList.add('ring-4', 'ring-cyan-400', 'bg-cyan-500/30', 'transition-all', 'duration-500');
+      setTimeout(() => {
+        targetEl.classList.remove('ring-4', 'ring-cyan-400', 'bg-cyan-500/30');
+      }, 1800);
+    }
+  };
 
   const widgetRef = useRef(null);
   const emojiPickerRef = useRef(null);
@@ -54,7 +99,6 @@ export default function WhatsAppWidget() {
 
   const ringingIntervalRef = useRef(null);
   const [activeInternalCall, setActiveInternalCall] = useState(null);
-  const [isClientCallRinging, setIsClientCallRinging] = useState(false);
 
   // Play repeating telephone ringing chime
   const startRingingBellSound = () => {
@@ -109,22 +153,16 @@ export default function WhatsAppWidget() {
     const unsub = onSnapshot(callDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.status === 'ringing') {
-          if (data.callerType === 'staff') {
-            setActiveInternalCall(data);
-            startRingingBellSound();
-          } else if (data.callerType === 'client') {
-            setIsClientCallRinging(true);
-            startRingingBellSound();
-          }
+        if (data.status === 'ringing' && data.callerType === 'staff') {
+          setActiveInternalCall(data);
+          startRingingBellSound();
+          triggerBrowserNotification(`📞 اتصال داخلي جاري من ${data.empName || 'الموظف'}...`);
         } else {
           setActiveInternalCall(null);
-          setIsClientCallRinging(false);
           stopRingingBellSound();
         }
       } else {
         setActiveInternalCall(null);
-        setIsClientCallRinging(false);
         stopRingingBellSound();
       }
     }, (err) => console.error("Internal call listener error:", err));
@@ -135,27 +173,12 @@ export default function WhatsAppWidget() {
     };
   }, [userPhone]);
 
-  // Toggle trigger or cancel internal call from client to staff
+  // Trigger internal call from client to staff
   const handleTriggerInternalCall = async () => {
     if (!userPhone) return;
     const cleanPhone = userPhone.replace(/[^0-9]/g, '');
     const callDocRef = doc(db, 'internal_calls', cleanPhone);
 
-    if (isClientCallRinging) {
-      // Cancel / End active call
-      try {
-        stopRingingBellSound();
-        setIsClientCallRinging(false);
-        await setDoc(callDocRef, { status: 'cancelled' }, { merge: true });
-        setToastAlert('تم إنهاء اتصال التنبيه الداخلي 🛑');
-        setTimeout(() => setToastAlert(null), 3000);
-      } catch (err) {
-        console.error("Cancel call error:", err);
-      }
-      return;
-    }
-
-    // Start call
     try {
       await setDoc(callDocRef, {
         id: cleanPhone,
@@ -173,14 +196,12 @@ export default function WhatsAppWidget() {
         conversationId: cleanPhone,
         phoneNumber: userPhone,
         sender: 'client',
-        text: "📞 تنبيه بوجود اتصال ورسالة",
+        text: "تنبيه بوجود رسالة",
         timestamp: serverTimestamp()
       });
 
-      setIsClientCallRinging(true);
       startRingingBellSound();
-      setToastAlert(`جاري الاتصال والتنبيه للموظف (${assignedEmp?.name || 'خدمة العملاء'})... 📞🔔`);
-      setTimeout(() => setToastAlert(null), 4000);
+      alert(`جاري الاتصال والتنبيه للموظف (${assignedEmp?.name || 'خدمة العملاء'})... 📞🔔`);
 
       setTimeout(async () => {
         try {
@@ -254,7 +275,7 @@ export default function WhatsAppWidget() {
 
   // Listen for custom trigger to open WhatsApp widget from anywhere in app
   useEffect(() => {
-    const handleOpenWidget = (e) => {
+    const handleOpenWidget = () => {
       const phone = localStorage.getItem('visitorPhone') || '';
       if (!phone) {
         alert('يرجى تسجيل الدخول أولاً بالـ OTP لتأكيد حسابك وبدء التواصل المباشر 🔐');
@@ -263,20 +284,6 @@ export default function WhatsAppWidget() {
       }
       setIsOpen(true);
       clearNotifications();
-
-      const targetId = e?.detail?.targetMsgId;
-      if (targetId) {
-        setTimeout(() => {
-          const el = document.getElementById(`msg-${targetId}`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.classList.add('ring-2', 'ring-cyan-400', 'animate-pulse');
-            setTimeout(() => {
-              el.classList.remove('ring-2', 'ring-cyan-400', 'animate-pulse');
-            }, 3000);
-          }
-        }, 400);
-      }
     };
     window.addEventListener('open_whatsapp_widget', handleOpenWidget);
     return () => window.removeEventListener('open_whatsapp_widget', handleOpenWidget);
@@ -380,25 +387,6 @@ export default function WhatsAppWidget() {
 
   // Trigger all notification alerts (sound, push, title flasher, favicon badge, in-app toast)
   const triggerNotifications = (msgText) => {
-    const isEmpLogged = typeof window !== 'undefined' && localStorage.getItem('isEmpLoggedIn') === 'true';
-    const alias = (localStorage.getItem('empAliasName') || '').toLowerCase();
-    const title = (localStorage.getItem('empTitle') || '').toLowerCase();
-    const code = (localStorage.getItem('empCode') || '').toLowerCase();
-    const visitor = (localStorage.getItem('visitorName') || '').toLowerCase();
-
-    const isAdmin = isEmpLogged && (
-      alias.includes('إدارة') || alias.includes('ادارة') || alias.includes('admin') || 
-      title.includes('إدارة') || title.includes('ادارة') || title.includes('مدير') || title.includes('أدمن') || title.includes('ادمن') ||
-      code === 'admin' || visitor.includes('إدارة') || visitor.includes('ادارة')
-    );
-
-    const isNonAdminEmp = isEmpLogged && !isAdmin;
-
-    // Suppress title flasher, red favicon badge, desktop push notification & toast for non-admin employees
-    if (isNonAdminEmp) {
-      return;
-    }
-
     playChimeSound();
     triggerBrowserNotification(msgText);
 
@@ -952,30 +940,12 @@ export default function WhatsAppWidget() {
     }
   };
 
-  const isAdminLoggedIn = (() => {
-    try {
-      const alias = (localStorage.getItem('empAliasName') || '').toLowerCase();
-      const title = (localStorage.getItem('empTitle') || '').toLowerCase();
-      const code = (localStorage.getItem('empCode') || '').toLowerCase();
-      const visitor = (localStorage.getItem('visitorName') || '').toLowerCase();
-      const isEmp = localStorage.getItem('isEmpLoggedIn') === 'true';
-      if (!isEmp && !visitor.includes('إدارة') && !visitor.includes('ادارة')) return false;
-      return alias.includes('إدارة') || alias.includes('ادارة') || alias.includes('admin') || 
-             title.includes('إدارة') || title.includes('ادارة') || title.includes('مدير') ||
-             code === 'admin' || visitor.includes('إدارة') || visitor.includes('ادارة');
-    } catch {
-      return false;
-    }
-  })();
-
-  const isEmpLogged = typeof window !== 'undefined' && localStorage.getItem('isEmpLoggedIn') === 'true';
-
   return (
     <>
       {/* Internal Call Ringing active state is integrated into the Notification Center */}
 
-      {/* In-App Floating Toast Alert Banner (Visible for Visitors and Admin, Hidden for Non-Admin Employees) */}
-      {(!isEmpLogged || isAdminLoggedIn) && toastAlert && !isOpen && (
+      {/* In-App Floating Toast Alert Banner */}
+      {toastAlert && !isOpen && (
         <div 
           onClick={() => { setIsOpen(true); clearNotifications(); }}
           className="fixed top-20 right-4 sm:right-6 z-[9999] bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-2 border-cyan-400 text-white px-4 py-3 rounded-2xl shadow-[0_10px_35px_rgba(6,182,212,0.5)] flex items-center gap-3 cursor-pointer animate-bounce max-w-sm"
@@ -1116,19 +1086,7 @@ export default function WhatsAppWidget() {
               </div>
             </div>
 
-            {localStorage.getItem('isEmpLoggedIn') === 'true' && !isAdminLoggedIn ? (
-              <div className="flex-1 p-6 flex flex-col items-center justify-center text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shadow-lg">
-                  <ShieldCheck size={32} />
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-white">حساب موظف معتمد 👨‍💼</h3>
-                <p className="text-xs text-cyan-200 leading-relaxed max-w-xs bg-slate-900/80 p-3 rounded-2xl border border-cyan-500/20">
-                  أنت مسجل دخول كموظف بالمنصة ({localStorage.getItem('empAliasName') || 'الموظف'}). المحادثات المباشرة بالويدجيت مخصصة للعملاء فقط.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* User Status Bar - Rendered strictly inside chat room */}
+            {/* User Status Bar - Rendered strictly inside chat room */}
             {widgetStep === 'chat_room' && (
               <div className="bg-cyan-950/40 px-4 py-2 border-b border-cyan-500/20 flex items-center justify-between text-[11px] shrink-0">
                 {/* Right Side: Connected Target Contact */}
@@ -1146,28 +1104,15 @@ export default function WhatsAppWidget() {
                   )}
                 </div>
 
-                {/* Left Side: Standalone Internal Call Alert Toggle Button */}
+                {/* Left Side: Standalone Internal Call Alert Trigger Button */}
                 <button
                   type="button"
                   onClick={handleTriggerInternalCall}
-                  className={`flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold p-1.5 px-2.5 rounded-xl shadow-md transition cursor-pointer active:scale-95 shrink-0 border ${
-                    isClientCallRinging
-                      ? 'bg-rose-950/90 hover:bg-rose-900 text-rose-200 border-rose-500/80 animate-pulse ring-2 ring-rose-500/40'
-                      : 'bg-cyan-900/70 hover:bg-cyan-800/90 text-cyan-200 border-cyan-400/50 animate-pulse'
-                  }`}
-                  title={isClientCallRinging ? "اضغط لإنهاء اتصال التنبيه الداخلي 🛑" : "اضغط لإرسال اتصال داخلي للتنبيه بالرسائل فوراً 📞"}
+                  className="flex items-center gap-1.5 text-cyan-200 text-[10px] sm:text-[11px] font-bold bg-cyan-900/70 hover:bg-cyan-800/90 p-1.5 px-2.5 rounded-xl border border-cyan-400/50 shadow-md transition cursor-pointer active:scale-95 animate-pulse shrink-0"
+                  title="اضغط لإرسال اتصال داخلي للتنبيه بالرسائل فوراً 📞"
                 >
-                  {isClientCallRinging ? (
-                    <>
-                      <PhoneCall size={13} className="text-rose-400 shrink-0 animate-spin" />
-                      <span>🛑 إنهاء اتصال التنبيه</span>
-                    </>
-                  ) : (
-                    <>
-                      <PhoneCall size={13} className="text-cyan-300 shrink-0" />
-                      <span>اتصال داخلي للتنبيه بالرسائل</span>
-                    </>
-                  )}
+                  <PhoneCall size={13} className="text-cyan-300 shrink-0" />
+                  <span>اتصال داخلي للتنبيه بالرسائل</span>
                 </button>
               </div>
             )}
@@ -1235,6 +1180,7 @@ export default function WhatsAppWidget() {
                 {/* Message List */}
                 <div 
                   ref={chatContainerRef}
+                  onScroll={handleWidgetScroll}
                   onClick={() => setShowEmojiPicker(false)}
                   className="flex-1 p-3.5 space-y-3 overflow-y-auto custom-scrollbar relative z-10"
                 >
@@ -1249,7 +1195,13 @@ export default function WhatsAppWidget() {
                     messages.map((msg, idx) => {
                       const isClient = msg.sender === 'client';
                       return (
-                        <div key={msg.id || idx} id={`msg-${msg.id}`} className={`group flex flex-col ${isClient ? 'items-end' : 'items-start'} relative transition-all duration-300 rounded-2xl`}>
+                        <div 
+                          key={msg.id || idx} 
+                          id={msg.id ? `widget-msg-${msg.id}` : `widget-msg-idx-${idx}`}
+                          data-widget-msg-id={msg.id || ''}
+                          data-widget-msg-text={msg.text || ''}
+                          className={`group flex flex-col ${isClient ? 'items-end' : 'items-start'} relative transition-all duration-300 rounded-2xl`}
+                        >
                           <div className={`relative ${isExpanded ? 'max-w-md sm:max-w-xl' : 'max-w-[85%]'} p-3 rounded-2xl text-xs leading-relaxed shadow-lg ${
                             isClient 
                               ? 'bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white rounded-br-none border border-cyan-400/30' 
@@ -1258,11 +1210,19 @@ export default function WhatsAppWidget() {
                             
                             {/* Reply Context Bubble */}
                             {msg.replyTo && (
-                              <div className="mb-2 p-1.5 rounded-lg bg-black/30 border-r-2 border-cyan-300 text-[10px] text-cyan-200 truncate">
-                                <span className="font-bold block text-cyan-300">
-                                  ↩️ الرد على ({msg.replyTo.sender === 'client' ? 'رسالتك' : 'الموظف'}):
-                                </span>
-                                <span className="opacity-90">{msg.replyTo.text}</span>
+                              <div 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  scrollToWidgetMessage(msg.replyTo);
+                                }}
+                                className="mb-2 p-1.5 rounded-lg bg-black/40 border-r-4 border-cyan-400 text-[10px] text-cyan-200 truncate cursor-pointer hover:bg-black/60 transition-all hover:scale-[1.01] active:scale-95 shadow-sm group/reply"
+                                title="انقر للانتقال للرسالة الأصلية 📍"
+                              >
+                                <div className="flex items-center justify-between font-bold text-cyan-300 text-[10px] mb-0.5">
+                                  <span>↩️ الرد على ({msg.replyTo.sender === 'client' ? 'رسالتك' : 'الموظف'}):</span>
+                                  <span className="text-[9px] opacity-70 group-hover/reply:opacity-100">انتقال 📍</span>
+                                </div>
+                                <span className="opacity-90 block truncate">{msg.replyTo.text}</span>
                               </div>
                             )}
 
@@ -1317,6 +1277,17 @@ export default function WhatsAppWidget() {
                     })
                   )}
                   <div ref={messagesEndRef} />
+
+                  {/* Floating Scroll to Bottom Button */}
+                  {showScrollBottomBtn && (
+                    <button 
+                      onClick={scrollToBottomWidget}
+                      className="absolute bottom-20 left-4 z-30 bg-slate-900/90 hover:bg-slate-800 text-cyan-400 p-2.5 rounded-full shadow-2xl border border-cyan-500/40 hover:border-cyan-300 transition-all active:scale-95 animate-bounce flex items-center justify-center cursor-pointer group"
+                      title="الانتقال لآخر رسالة في المحادثة"
+                    >
+                      <ChevronDown size={18} className="group-hover:translate-y-0.5 transition-transform" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Emoji Picker Popover */}
@@ -1411,10 +1382,9 @@ export default function WhatsAppWidget() {
                 </form>
               </div>
             )}
-          </>
+
+          </div>
         )}
-      </div>
-    )}
 
         {/* Floating Trigger Button */}
         {!isExpanded && (
@@ -1425,8 +1395,8 @@ export default function WhatsAppWidget() {
             <MessageCircle size={22} className="animate-bounce shrink-0" />
             <span className="text-xs tracking-wide whitespace-nowrap">تواصل معنا</span>
             
-            {/* Red Notification Badge (Visible for Visitors and Admin, Hidden for Non-Admin Employees) */}
-            {hasUnread && (!isEmpLogged || isAdminLoggedIn) && (
+            {/* Red Notification Badge */}
+            {hasUnread && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-white text-[9px] font-bold items-center justify-center">!</span>
