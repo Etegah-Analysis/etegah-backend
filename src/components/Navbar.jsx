@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogOut, Bell, ShieldCheck, Trash2 } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, getDocs, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDocs, getDoc, setDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import logoImg from '../assets/logo.jpg';
 import { playNotificationChime } from '../utils/notificationBadge';
@@ -210,18 +210,61 @@ export default function Navbar() {
     };
   }, []);
 
+  const [remoteReadMsgIds, setRemoteReadMsgIds] = useState([]);
+  const [remoteReadPlatformIds, setRemoteReadPlatformIds] = useState([]);
+  const [remoteLastReadTime, setRemoteLastReadTime] = useState(0);
+
+  // Cross-device real-time listener for Navbar Notification State
+  useEffect(() => {
+    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
+
+    const navNotifRef = doc(db, 'users_notif_state', `navbar_${cleanPhone}`);
+    const unsubNav = onSnapshot(navNotifRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (Array.isArray(data.readMsgIds) && data.readMsgIds.length > 0) {
+          setRemoteReadMsgIds(prev => Array.from(new Set([...prev, ...data.readMsgIds])));
+        }
+        if (Array.isArray(data.readPlatformIds) && data.readPlatformIds.length > 0) {
+          setRemoteReadPlatformIds(prev => Array.from(new Set([...prev, ...data.readPlatformIds])));
+        }
+        if (typeof data.lastReadTime === 'number') {
+          setRemoteLastReadTime(prev => Math.max(prev, data.lastReadTime));
+        }
+      }
+    }, (err) => console.warn("Navbar Firestore notif sync error:", err));
+
+    return () => unsubNav();
+  }, [visitorPhone, isEmp]);
+
+  const syncNavbarToFirestore = (extraMsgIds = [], extraPlatformIds = [], updateTimestamp = false) => {
+    const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
+    const now = Date.now();
+    const payload = {
+      updatedAt: serverTimestamp()
+    };
+    if (extraMsgIds.length > 0) payload.readMsgIds = arrayUnion(...extraMsgIds);
+    if (extraPlatformIds.length > 0) payload.readPlatformIds = arrayUnion(...extraPlatformIds);
+    if (updateTimestamp) payload.lastReadTime = now;
+
+    setDoc(doc(db, 'users_notif_state', `navbar_${cleanPhone}`), payload, { merge: true }).catch(() => {});
+  };
+
   // Merge chat and platform notifications
   useEffect(() => {
     const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
     const savedReadMsgIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${cleanPhone}`) || '[]');
     const savedReadPlatformIds = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${cleanPhone}`) || '[]');
 
+    const allReadMsgIds = Array.from(new Set([...savedReadMsgIds, ...remoteReadMsgIds]));
+    const allReadPlatformIds = Array.from(new Set([...savedReadPlatformIds, ...remoteReadPlatformIds]));
+
     // Admin receives ALL notifications (Customer WhatsApp chats, website chats, reports & videos).
     // Non-admin employees receive ONLY Reports 📄 & Videos 🎥 notifications (customer chats suppressed).
     // Visitors/Customers receive their chat notifications + platform reports & videos.
     const shouldSuppressCustomerChats = isEmp && !isAdmin;
-    const filteredChatMsgs = shouldSuppressCustomerChats ? [] : chatNotifications.filter(m => !savedReadMsgIds.includes(m.id));
-    const filteredPlatformMsgs = platformNotifications.filter(m => !savedReadPlatformIds.includes(m.id));
+    const filteredChatMsgs = shouldSuppressCustomerChats ? [] : chatNotifications.filter(m => !allReadMsgIds.includes(m.id));
+    const filteredPlatformMsgs = platformNotifications.filter(m => !allReadPlatformIds.includes(m.id));
 
     const merged = [...filteredChatMsgs, ...filteredPlatformMsgs].sort((a, b) => {
       const tA = a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.timestamp ? new Date(a.timestamp).getTime() : (a.timestampMillis || 0));
@@ -232,11 +275,12 @@ export default function Navbar() {
     setNotifications(merged);
 
     const savedLastRead = localStorage.getItem(`etegah_notif_last_read_${cleanPhone}`);
-    const lastReadTime = savedLastRead ? parseInt(savedLastRead, 10) : 0;
+    const localLastReadTime = savedLastRead ? parseInt(savedLastRead, 10) : 0;
+    const effectiveLastReadTime = Math.max(localLastReadTime, remoteLastReadTime);
 
     const unreadList = merged.filter(m => {
       const msgTime = m.timestamp?.toMillis ? m.timestamp.toMillis() : (m.timestamp ? new Date(m.timestamp).getTime() : (m.timestampMillis || 0));
-      return msgTime > lastReadTime;
+      return msgTime > effectiveLastReadTime;
     });
 
     if (!isInitialNotifMount.current && unreadList.length > prevUnreadNotifCountRef.current) {
@@ -246,7 +290,7 @@ export default function Navbar() {
     prevUnreadNotifCountRef.current = unreadList.length;
 
     setUnreadCount(unreadList.length);
-  }, [chatNotifications, platformNotifications, visitorPhone, isEmp, isAdmin]);
+  }, [chatNotifications, platformNotifications, visitorPhone, isEmp, isAdmin, remoteReadMsgIds, remoteReadPlatformIds, remoteLastReadTime]);
 
   // Listen to custom window events for clearing notifications
   useEffect(() => {
@@ -255,6 +299,7 @@ export default function Navbar() {
         const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
         localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
         setUnreadCount(0);
+        syncNavbarToFirestore([], [], true);
       }
     };
     window.addEventListener('etegah_unread_msg', handleUnreadEvent);
@@ -284,6 +329,7 @@ export default function Navbar() {
       const cleanPhone = visitorPhone ? visitorPhone.replace(/[^0-9]/g, '') : (isEmp ? 'employee' : 'guest');
       localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
       setUnreadCount(0);
+      syncNavbarToFirestore([], [], true);
     }
   };
 
@@ -297,6 +343,7 @@ export default function Navbar() {
         savedReadPlatform.push(msgId);
         localStorage.setItem(`etegah_read_platform_ids_${cleanPhone}`, JSON.stringify(savedReadPlatform));
       }
+      syncNavbarToFirestore([], [msgId], true);
       setNotifications(prev => prev.filter(m => m.id !== msgId));
       setIsNotifOpen(false);
       setIsMobileMenuOpen(false);
@@ -315,6 +362,7 @@ export default function Navbar() {
       savedReadIds.push(msgId);
       localStorage.setItem(`etegah_read_ids_${cleanPhone}`, JSON.stringify(savedReadIds));
     }
+    syncNavbarToFirestore([msgId], [], true);
     setNotifications(prev => prev.filter(m => m.id !== msgId));
     localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
     setUnreadCount(prev => Math.max(0, prev - 1));
@@ -334,6 +382,8 @@ export default function Navbar() {
     localStorage.setItem(`etegah_read_ids_${cleanPhone}`, JSON.stringify(newChatIds));
     localStorage.setItem(`etegah_read_platform_ids_${cleanPhone}`, JSON.stringify(newPlatformIds));
     localStorage.setItem(`etegah_notif_last_read_${cleanPhone}`, Date.now().toString());
+
+    syncNavbarToFirestore(chatIds, platformIds, true);
 
     setNotifications([]);
     setUnreadCount(0);
