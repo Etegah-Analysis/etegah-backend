@@ -10081,7 +10081,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
           {/* مركز الإشعارات والتنبيهات الموحد 3D (أحمر عند وصول إشعار / أبيض عند الفتح والقراءة) */}
           {(() => {
             const isCallRinging = incomingInternalCall && incomingInternalCall.status === 'ringing';
-            const isBellRed = (totalAllNotificationsCount > 0 && !hasViewedNotifications) || isCallRinging;
+            const isBellRed = totalAllNotificationsCount > 0 || isCallRinging;
             
             return (
               <div className="flex items-center gap-1.5 relative z-[1000]" ref={notifDropdownRef}>
