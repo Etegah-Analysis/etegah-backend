@@ -53,7 +53,7 @@ export default async function handler(req, res) {
           to: toNumber
         };
 
-        if (mediaUrl) {
+        if (mediaUrl && typeof mediaUrl === 'string' && (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://'))) {
           messagePayload.mediaUrl = [mediaUrl];
         }
 
