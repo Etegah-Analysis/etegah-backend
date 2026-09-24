@@ -46,11 +46,13 @@ function PublicLayout({ children }) {
   );
 }
 
-// A protected route wrapper for visitors
+// A protected route wrapper for visitors / employees / clients
 function VisitorProtectedRoute({ children }) {
-  const isVisitorLoggedIn = localStorage.getItem('visitorName');
+  const isVisitorLoggedIn = Boolean(localStorage.getItem('visitorName')) || Boolean(localStorage.getItem('visitorPhone'));
   const isEmpLoggedIn = localStorage.getItem('isEmpLoggedIn') === 'true';
-  if (!isVisitorLoggedIn && !isEmpLoggedIn) {
+  const isUserLoggedIn = Boolean(auth.currentUser);
+
+  if (!isVisitorLoggedIn && !isEmpLoggedIn && !isUserLoggedIn) {
     return <Navigate to="/visitor-login" replace />;
   }
   return children;
@@ -141,15 +143,27 @@ function App() {
           />
           <Route 
             path="/us-options" 
-            element={<PublicLayout><USOptions /></PublicLayout>} 
+            element={
+              <VisitorProtectedRoute>
+                <PublicLayout><USOptions /></PublicLayout>
+              </VisitorProtectedRoute>
+            } 
           />
           <Route 
             path="/news" 
-            element={<PublicLayout><News /></PublicLayout>} 
+            element={
+              <VisitorProtectedRoute>
+                <PublicLayout><News /></PublicLayout>
+              </VisitorProtectedRoute>
+            } 
           />
           <Route 
             path="/platform-videos" 
-            element={<PublicLayout><PlatformVideos /></PublicLayout>} 
+            element={
+              <VisitorProtectedRoute>
+                <PublicLayout><PlatformVideos /></PublicLayout>
+              </VisitorProtectedRoute>
+            } 
           />
         </Routes>
       </BrowserRouter>
