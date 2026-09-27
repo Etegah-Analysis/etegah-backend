@@ -335,7 +335,7 @@ export default function PlatformVideos() {
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
                     <Download size={16} />
-                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <span>📄 / 🖼️ عرض التقرير (صورة / PDF)</span>
                     <ExternalLink size={14} className="opacity-80" />
                   </button>
                 ) : (
@@ -398,7 +398,7 @@ export default function PlatformVideos() {
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
                     <Download size={16} />
-                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <span>📄 / 🖼️ عرض التقرير (صورة / PDF)</span>
                     <ExternalLink size={14} className="opacity-80" />
                   </button>
                 ) : (
@@ -461,7 +461,7 @@ export default function PlatformVideos() {
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
                     <Download size={16} />
-                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <span>📄 / 🖼️ عرض التقرير (صورة / PDF)</span>
                     <ExternalLink size={14} className="opacity-80" />
                   </button>
                 ) : (
@@ -524,7 +524,7 @@ export default function PlatformVideos() {
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
                     <Download size={16} />
-                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <span>📄 / 🖼️ عرض التقرير (صورة / PDF)</span>
                     <ExternalLink size={14} className="opacity-80" />
                   </button>
                 ) : (
@@ -676,13 +676,26 @@ export default function PlatformVideos() {
               </div>
             </div>
 
-            {/* Modal Body: Multi-Fallback PDF Viewer */}
-            <div className="flex-1 bg-slate-950 p-2 sm:p-4 overflow-hidden relative flex flex-col items-center justify-center">
+            {/* Modal Body: Multi-Fallback PDF / Image Viewer */}
+            <div className="flex-1 bg-slate-950 p-2 sm:p-4 overflow-auto relative flex flex-col items-center justify-center">
               {(() => {
                 const url = selectedPdfReport.pdfUrl || '';
+                const isImage = url.startsWith('data:image/') || url.match(/\.(png|jpg|jpeg|webp|gif)($|\?)/i);
                 const isBase64 = url.startsWith('data:');
                 const isDataHtml = url.startsWith('data:text/html') || url.includes('.html') || url.includes('text/html');
-                const isDirectHtml = url.includes('.html') || isDataHtml || !url.toLowerCase().includes('.pdf');
+                const isDirectHtml = url.includes('.html') || isDataHtml;
+
+                if (isImage) {
+                  return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2 overflow-auto">
+                      <img
+                        src={url}
+                        alt={selectedPdfReport.title}
+                        className="max-w-full max-h-[75vh] object-contain rounded-2xl border-2 border-cyan-500/40 shadow-[0_10px_30px_rgba(0,0,0,0.8)]"
+                      />
+                    </div>
+                  );
+                }
 
                 if (isDirectHtml || isBase64) {
                   return (
