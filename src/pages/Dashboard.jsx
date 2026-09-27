@@ -6577,6 +6577,15 @@ const Dashboard = () => {
     setIsSubscriptionModalOpen(true);
   };
 
+  const isPdfUrl = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    const lower = url.toLowerCase();
+    return lower.startsWith('data:application/pdf') || 
+           lower.startsWith('data:application/x-pdf') || 
+           lower.includes('.pdf') || 
+           lower.includes('pdf');
+  };
+
   const uploadReceiptFileToStorage = async (fileOrBase64, filenamePrefix = 'receipt') => {
     if (!fileOrBase64) return '';
     if (typeof fileOrBase64 === 'string' && (fileOrBase64.startsWith('http://') || fileOrBase64.startsWith('https://'))) {
@@ -6625,7 +6634,7 @@ const Dashboard = () => {
   const compressReceiptImage = (fileOrDataUrl, maxDimension = 1400, quality = 0.80) => {
     return new Promise((resolve) => {
       if (!fileOrDataUrl) return resolve('');
-      if (typeof fileOrDataUrl === 'string' && (fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://') || fileOrDataUrl.startsWith('data:application/pdf'))) {
+      if (isPdfUrl(fileOrDataUrl) || (typeof fileOrDataUrl === 'string' && (fileOrDataUrl.startsWith('http://') || fileOrDataUrl.startsWith('https://')))) {
         return resolve(fileOrDataUrl);
       }
       const img = new Image();
@@ -6675,10 +6684,15 @@ const Dashboard = () => {
       }
 
       if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
+        const isPdfFile = (fileOrDataUrl.type && fileOrDataUrl.type.toLowerCase().includes('pdf')) || 
+                          (fileOrDataUrl.name && fileOrDataUrl.name.toLowerCase().endsWith('.pdf'));
         const reader = new FileReader();
         reader.onload = async (ev) => {
-          const rawResult = ev.target.result;
-          if (typeof rawResult === 'string' && (rawResult.startsWith('data:application/pdf') || fileOrDataUrl.type?.includes('pdf') || fileOrDataUrl.name?.toLowerCase().endsWith('.pdf'))) {
+          let rawResult = ev.target.result;
+          if (isPdfFile || (typeof rawResult === 'string' && isPdfUrl(rawResult))) {
+            if (typeof rawResult === 'string' && !rawResult.startsWith('data:application/pdf')) {
+              rawResult = rawResult.replace(/^data:[^;]+;/, 'data:application/pdf;');
+            }
             setSubReceiptFileUrl(rawResult);
             toast.success('تم إرفاق ملف PDF إشعار التحويل بنجاح 📄', { id: toastId });
           } else {
@@ -6695,8 +6709,12 @@ const Dashboard = () => {
       }
 
       if (typeof fileOrDataUrl === 'string') {
-        if (fileOrDataUrl.startsWith('data:application/pdf')) {
-          setSubReceiptFileUrl(fileOrDataUrl);
+        if (isPdfUrl(fileOrDataUrl)) {
+          let fixedUrl = fileOrDataUrl;
+          if (fixedUrl.startsWith('data:') && !fixedUrl.startsWith('data:application/pdf')) {
+            fixedUrl = fixedUrl.replace(/^data:[^;]+;/, 'data:application/pdf;');
+          }
+          setSubReceiptFileUrl(fixedUrl);
           toast.success('تم إرفاق ملف PDF إشعار التحويل بنجاح 📄', { id: toastId });
           return;
         }
@@ -21710,11 +21728,11 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     {subReceiptFileUrl ? (
                       <div className="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-emerald-500/40 gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          {(typeof subReceiptFileUrl === 'string' && (subReceiptFileUrl.startsWith('data:application/pdf') || subReceiptFileUrl.toLowerCase().includes('.pdf'))) ? (
+                          {isPdfUrl(subReceiptFileUrl) ? (
                             <div 
-                              className="w-12 h-12 rounded-lg bg-rose-950/80 border border-rose-500/50 flex flex-col items-center justify-center text-rose-300 font-mono text-xs font-bold shrink-0 cursor-pointer hover:bg-rose-900 transition"
-                              onClick={() => window.open(subReceiptFileUrl, '_blank')}
-                              title="انقر لفتح ملف PDF الإشعار"
+                              className="w-12 h-12 rounded-lg bg-rose-950/80 border border-rose-500/50 flex flex-col items-center justify-center text-rose-300 font-mono text-xs font-bold shrink-0 cursor-pointer hover:bg-rose-900 transition shadow-sm"
+                              onClick={() => setLightboxImage({ url: subReceiptFileUrl, title: 'معاينة ملف PDF الإشعار' })}
+                              title="انقر لمعاينة ملف PDF"
                             >
                               <span className="text-[10px]">PDF</span>
                               <span className="text-[12px]">📄</span>
@@ -21728,7 +21746,9 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                             />
                           )}
                           <div className="min-w-0">
-                            <span className="text-xs text-emerald-300 font-bold block truncate">✓ الإشعار محمل وجاهز</span>
+                            <span className="text-xs text-emerald-300 font-bold block truncate">
+                              {isPdfUrl(subReceiptFileUrl) ? '✓ ملف PDF الإشعار محمل وجاهز' : '✓ الإشعار محمل وجاهز'}
+                            </span>
                             <span className="text-[10px] text-gray-400">انقر على الزر الأحمر لمسحه واختيار إشعار بديل</span>
                           </div>
                         </div>
@@ -21748,16 +21768,22 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                           htmlFor="sub-receipt-file-input-web"
                           tabIndex="0"
                           onPaste={handleSubscriptionModalPaste}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const file = e.dataTransfer?.files?.[0];
+                            if (file) handleProcessAndSetReceiptImage(file);
+                          }}
                           className="border-2 border-dashed border-emerald-500/40 hover:border-emerald-400 bg-slate-900/80 rounded-2xl p-4 text-center cursor-pointer transition flex flex-col items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 group block"
                         >
                           <span className="text-2xl group-hover:scale-110 transition-transform">📋 / 📁</span>
-                          <span className="text-xs font-bold text-emerald-300 block">انقر هنا لاختيار ملف الإشعار أو اضغط (Ctrl + V) للصق صورة الإشعار مباشرةً</span>
-                          <span className="text-[10px] text-gray-400 block">يدعم الصور (JPG, PNG) وملفات PDF (حتى 800KB)</span>
+                          <span className="text-xs font-bold text-emerald-300 block">انقر هنا لاختيار ملف الإشعار أو اسحبه هنا أو اضغط (Ctrl + V) للصق مباشرةً</span>
+                          <span className="text-[10px] text-gray-400 block">يدعم الصور (JPG, PNG) وملفات PDF</span>
                           <input 
                             id="sub-receipt-file-input-web"
                             type="file"
-                            accept="image/*,.pdf"
-                            onClick={(e) => { e.stopPropagation(); e.target.value = null; }}
+                            accept="image/*,.pdf,application/pdf"
+                            onClick={(e) => { e.target.value = null; }}
                             onChange={handleReceiptFileUpload}
                             className="hidden"
                           />
@@ -21862,19 +21888,30 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                               {/* Receipt Image / Icon */}
                               {item.receiptUrl ? (
                                 <div className="shrink-0 group relative">
-                                  <img 
-                                    src={item.receiptUrl} 
-                                    alt="Receipt" 
-                                    className="w-16 h-16 object-cover rounded-xl border-2 border-emerald-400/60 cursor-pointer group-hover:scale-105 transition shrink-0 bg-slate-950 shadow-md"
-                                    onClick={() => setLightboxImage({ url: item.receiptUrl, title: `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}` })}
-                                    title="انقر لتكبير الإشعار"
-                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                  />
+                                  {isPdfUrl(item.receiptUrl) ? (
+                                    <div 
+                                      onClick={() => setLightboxImage({ url: item.receiptUrl, title: `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}` })}
+                                      className="w-16 h-16 rounded-xl bg-rose-950/90 border-2 border-rose-500/60 flex flex-col items-center justify-center text-rose-300 cursor-pointer group-hover:scale-105 transition shrink-0 shadow-md hover:bg-rose-900"
+                                      title="انقر لمعاينة ملف الـ PDF"
+                                    >
+                                      <span className="text-xs font-mono font-bold">PDF</span>
+                                      <span className="text-lg">📄</span>
+                                    </div>
+                                  ) : (
+                                    <img 
+                                      src={item.receiptUrl} 
+                                      alt="Receipt" 
+                                      className="w-16 h-16 object-cover rounded-xl border-2 border-emerald-400/60 cursor-pointer group-hover:scale-105 transition shrink-0 bg-slate-950 shadow-md"
+                                      onClick={() => setLightboxImage({ url: item.receiptUrl, title: `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}` })}
+                                      title="انقر لتكبير الإشعار"
+                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                  )}
                                   <div 
                                     onClick={() => setLightboxImage({ url: item.receiptUrl, title: `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}` })}
                                     className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center text-white transition cursor-pointer text-[10px] font-bold"
                                   >
-                                    🔍 تكبير
+                                    🔍 معاينة
                                   </div>
                                 </div>
                               ) : (
@@ -23857,11 +23894,11 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
 
               {/* High-Resolution Scrollable & Zoomable Image Box */}
               <div className="overflow-auto max-h-[75vh] w-full rounded-2xl flex items-center justify-center bg-black/80 p-3 border border-emerald-500/20 shadow-inner relative min-h-[300px]">
-                {String(lightboxImage.url || lightboxImage).startsWith('data:application/pdf') || String(lightboxImage.url || lightboxImage).endsWith('.pdf') ? (
+                {isPdfUrl(lightboxImage.url || lightboxImage) ? (
                   <iframe 
                     src={lightboxImage.url || lightboxImage} 
                     title="PDF Receipt" 
-                    className="w-full h-[70vh] rounded-xl border border-emerald-500/40"
+                    className="w-full h-[70vh] rounded-xl border border-emerald-500/40 bg-white"
                   />
                 ) : (
                   <img 
