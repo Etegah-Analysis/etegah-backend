@@ -14010,6 +14010,25 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
               if (subscribedEmpFilter !== 'all') {
                 if (subscribedEmpFilter === 'admin') {
                   pool = pool.filter(c => isLeadWithAdmin(c));
+                } else if (subscribedEmpFilter.startsWith('team_')) {
+                  const leaderUid = subscribedEmpFilter.replace('team_', '');
+                  const leaderObj = employees.find(e => e.uid === leaderUid);
+                  const teamMembers = employees.filter(m => m.leaderUid === leaderUid || m.leaderId === leaderUid || (leaderObj?.email && m.leaderEmail?.toLowerCase() === leaderObj.email.toLowerCase()));
+                  const teamUids = new Set([leaderUid, ...teamMembers.map(m => m.uid)]);
+                  const teamMails = new Set([
+                    leaderObj?.email?.toLowerCase(),
+                    ...teamMembers.map(m => m.email?.toLowerCase()).filter(Boolean)
+                  ]);
+
+                  pool = pool.filter(c => {
+                    const assignedUid = c.assignedToUid;
+                    const assignedMail = c.assignedTo?.toLowerCase();
+                    const isAssigned = (assignedUid && assignedUid !== 'admin') || (assignedMail && assignedMail !== 'admin');
+                    if (isAssigned) {
+                      return (assignedUid && teamUids.has(assignedUid)) || (assignedMail && teamMails.has(assignedMail));
+                    }
+                    return c.addedByUid && teamUids.has(c.addedByUid);
+                  });
                 } else {
                   pool = pool.filter(c => c.assignedToUid === subscribedEmpFilter || (targetEmpMail && c.assignedTo?.toLowerCase() === targetEmpMail));
                 }
@@ -14110,17 +14129,44 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
 
             {/* Filter Bar */}
             {(() => {
-              const scopeSubscribed = (!isAdmin && !isCoordinator && !isCustomerService)
-                ? (isLeader
-                    ? (subscribedEmpFilter === 'all'
-                        ? leaderSubscribedClients
-                        : leaderSubscribedClients.filter(c => c.assignedToUid === subscribedEmpFilter || c.assignedTo?.toLowerCase() === employees.find(e => e.uid === subscribedEmpFilter)?.email?.toLowerCase()))
-                    : agentSubscribedClients)
-                : (subscribedEmpFilter === 'all'
-                    ? allSubscribedClients
-                    : (subscribedEmpFilter === 'admin'
-                        ? allSubscribedClients.filter(c => isLeadWithAdmin(c))
-                        : allSubscribedClients.filter(c => c.assignedToUid === subscribedEmpFilter || c.assignedTo?.toLowerCase() === employees.find(e => e.uid === subscribedEmpFilter)?.email?.toLowerCase())));
+              const getFilteredSubscribedClients = (filterVal) => {
+                if (!filterVal || filterVal === 'all') {
+                  return (!isAdmin && !isCoordinator && !isCustomerService)
+                    ? (isLeader ? leaderSubscribedClients : agentSubscribedClients)
+                    : allSubscribedClients;
+                }
+                if (filterVal === 'admin') {
+                  return allSubscribedClients.filter(c => isLeadWithAdmin(c));
+                }
+                if (filterVal.startsWith('team_')) {
+                  const leaderUid = filterVal.replace('team_', '');
+                  const leaderObj = employees.find(e => e.uid === leaderUid);
+                  const teamMembers = employees.filter(m => m.leaderUid === leaderUid || m.leaderId === leaderUid || (leaderObj?.email && m.leaderEmail?.toLowerCase() === leaderObj.email.toLowerCase()));
+                  const teamUids = new Set([leaderUid, ...teamMembers.map(m => m.uid)]);
+                  const teamMails = new Set([
+                    leaderObj?.email?.toLowerCase(),
+                    ...teamMembers.map(m => m.email?.toLowerCase()).filter(Boolean)
+                  ]);
+
+                  const list = (!isAdmin && !isCoordinator && !isCustomerService && isLeader) ? leaderSubscribedClients : allSubscribedClients;
+                  return list.filter(c => {
+                    const assignedUid = c.assignedToUid;
+                    const assignedMail = c.assignedTo?.toLowerCase();
+                    const isAssigned = (assignedUid && assignedUid !== 'admin') || (assignedMail && assignedMail !== 'admin');
+                    if (isAssigned) {
+                      return (assignedUid && teamUids.has(assignedUid)) || (assignedMail && teamMails.has(assignedMail));
+                    }
+                    return c.addedByUid && teamUids.has(c.addedByUid);
+                  });
+                }
+
+                const targetEmp = employees.find(e => e.uid === filterVal);
+                const targetEmpMail = targetEmp?.email?.toLowerCase();
+                const list = (!isAdmin && !isCoordinator && !isCustomerService && isLeader) ? leaderSubscribedClients : allSubscribedClients;
+                return list.filter(c => c.assignedToUid === filterVal || (targetEmpMail && c.assignedTo?.toLowerCase() === targetEmpMail));
+              };
+
+              const scopeSubscribed = getFilteredSubscribedClients(subscribedEmpFilter);
 
               return (
                 <div className="px-6 py-3.5 bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white border-b border-emerald-100 flex flex-wrap justify-between items-center gap-3">
@@ -14140,9 +14186,14 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                             </option>
                           )}
                           {isLeader && (
-                            <option value={currentUser?.uid} className="bg-slate-900 text-white font-bold">
-                              👑 خاص بي كـ ليدر ({leaderSubscribedClients.filter(c => c.assignedToUid === currentUser?.uid || c.assignedTo?.toLowerCase() === currentUser?.email?.toLowerCase()).length} مشترك)
-                            </option>
+                            <>
+                              <option value={`team_${currentUser?.uid}`} className="bg-slate-900 text-amber-300 font-bold">
+                                👑 كامل فريقي (إجمالي مبيعات الفريق: {leaderSubscribedClients.length} مشتركين)
+                              </option>
+                              <option value={currentUser?.uid} className="bg-slate-900 text-white font-bold">
+                                👤 مبيعاتي الشخصية فقط ({leaderSubscribedClients.filter(c => c.assignedToUid === currentUser?.uid || c.assignedTo?.toLowerCase() === currentUser?.email?.toLowerCase()).length} مشتركين)
+                              </option>
+                            </>
                           )}
                           {isLeader && myTeamMembers.map(emp => {
                             const count = leaderSubscribedClients.filter(c => c.assignedToUid === emp.uid || c.assignedTo?.toLowerCase() === emp.email?.toLowerCase()).length;
@@ -14152,15 +14203,23 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                               </option>
                             );
                           })}
-                          {!isLeader && employees.filter(e => e.jobTitle === 'Leader').map(leader => {
-                            const teamMembers = employees.filter(m => m.leaderUid === leader.uid);
+                          {!isLeader && employees.filter(e => e.jobTitle === 'Leader' || e.role === 'leader').map(leader => {
+                            const teamMembers = employees.filter(m => m.leaderUid === leader.uid || m.leaderId === leader.uid || (leader.email && m.leaderEmail?.toLowerCase() === leader.email.toLowerCase()));
+                            const teamUids = new Set([leader.uid, ...teamMembers.map(m => m.uid)]);
+                            const teamMails = new Set([
+                              leader.email?.toLowerCase(),
+                              ...teamMembers.map(m => m.email?.toLowerCase()).filter(Boolean)
+                            ]);
                             const leaderOwnCount = allSubscribedClients.filter(c => c.assignedToUid === leader.uid || c.assignedTo?.toLowerCase() === leader.email?.toLowerCase()).length;
-                            const teamTotalCount = allSubscribedClients.filter(c => 
-                              c.assignedToUid === leader.uid || 
-                              c.addedByUid === leader.uid || 
-                              c.assignedTo?.toLowerCase() === leader.email?.toLowerCase() ||
-                              teamMembers.some(m => m.uid === c.assignedToUid || m.uid === c.addedByUid || m.email?.toLowerCase() === c.assignedTo?.toLowerCase())
-                            ).length;
+                            const teamTotalCount = allSubscribedClients.filter(c => {
+                              const assignedUid = c.assignedToUid;
+                              const assignedMail = c.assignedTo?.toLowerCase();
+                              const isAssigned = (assignedUid && assignedUid !== 'admin') || (assignedMail && assignedMail !== 'admin');
+                              if (isAssigned) {
+                                return (assignedUid && teamUids.has(assignedUid)) || (assignedMail && teamMails.has(assignedMail));
+                              }
+                              return c.addedByUid && teamUids.has(c.addedByUid);
+                            }).length;
 
                             return (
                               <optgroup 
@@ -14168,6 +14227,9 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                 label={`👑 فريق الليدر: ${leader.name || leader.username || 'ليدر'} (إجمالي: ${teamTotalCount} مشترك)`}
                                 className="bg-slate-900 text-amber-300 font-bold"
                               >
+                                <option value={`team_${leader.uid}`} className="bg-slate-900 text-amber-300 font-black">
+                                  👑 كامل فريق {leader.name || leader.username} (إجمالي الفريق: {teamTotalCount} مشتركين)
+                                </option>
                                 <option value={leader.uid} className="bg-slate-900 text-white">
                                   👑 الليدر: {leader.name || leader.username} (خاص به: {leaderOwnCount} مشترك)
                                 </option>
@@ -14300,17 +14362,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                 : null;
               const targetEmpMail = targetEmp?.email?.toLowerCase();
 
-              let filtered = (!isAdmin && !isCoordinator && !isCustomerService)
-                ? (isLeader
-                    ? (subscribedEmpFilter === 'all'
-                        ? leaderSubscribedClients
-                        : leaderSubscribedClients.filter(c => c.assignedToUid === subscribedEmpFilter || (targetEmpMail && c.assignedTo?.toLowerCase() === targetEmpMail)))
-                    : agentSubscribedClients)
-                : (subscribedEmpFilter === 'all'
-                    ? allSubscribedClients
-                    : (subscribedEmpFilter === 'admin'
-                        ? allSubscribedClients.filter(c => isLeadWithAdmin(c))
-                        : allSubscribedClients.filter(c => c.assignedToUid === subscribedEmpFilter || (targetEmpMail && c.assignedTo?.toLowerCase() === targetEmpMail))));
+              let filtered = getFilteredSubscribedClients(subscribedEmpFilter);
 
               if (subMonthFilter !== 'all') {
                 filtered = filtered.filter(c => {
