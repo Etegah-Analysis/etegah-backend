@@ -12,7 +12,7 @@ export default function PlatformVideos() {
   const isEmp = localStorage.getItem('isEmpLoggedIn') === 'true' || localStorage.getItem('visitorName')?.includes('Admin') || localStorage.getItem('visitorName')?.includes('إدارة');
 
   useEffect(() => {
-    document.title = 'فيديوهات المنصة والنتائج السابقة - اتجاه للتحليل الذكي';
+    document.title = 'تقارير رؤية الافتتاح والإغلاق وتقرير نتائج المنصة السابقة - اتجاه للتحليل الذكي';
 
     const unsubReports = onSnapshot(collection(db, 'weekly_reports'), (snapshot) => {
       const reportsMap = { saudi: null, us: null };
@@ -90,7 +90,7 @@ export default function PlatformVideos() {
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold text-white mb-3 tracking-wide drop-shadow-md">
-            فيديوهات المنصة والنتائج السابقة 🎥✨
+            تقارير رؤية الافتتاح والإغلاق وتقرير نتائج المنصة السابقة 📄✨
           </h1>
 
           <p className="text-xs sm:text-sm text-cyan-200 max-w-2xl mx-auto leading-relaxed">

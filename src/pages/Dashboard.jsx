@@ -8920,10 +8920,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
     const total = list.length;
     const t1Count = list.filter(s => s.status === 'target1').length;
     const t2Count = list.filter(s => s.status === 'target2').length;
+    const t3Count = list.filter(s => s.status === 'target3').length;
+    const t4Count = list.filter(s => s.status === 'target4').length;
+    const otherTargets = list.filter(s => String(s.status || '').startsWith('target') && !['target1','target2','target3','target4'].includes(s.status)).length;
     const slCount = list.filter(s => s.status === 'stop_loss').length;
-    const winCount = t1Count + t2Count;
+    const winCount = t1Count + t2Count + t3Count + t4Count + otherTargets;
     const closedCount = winCount + slCount;
-    const activeCount = list.filter(s => s.status !== 'target1' && s.status !== 'target2' && s.status !== 'stop_loss').length;
+    const activeCount = list.filter(s => s.status === 'active' || (!['target1', 'target2', 'target3', 'target4', 'stop_loss', 'cancelled'].includes(s.status) && !String(s.status || '').startsWith('target'))).length;
     const winRate = total > 0 ? Math.round((winCount / total) * 100) : 0;
 
     const printWindow = window.open('', '_blank');
@@ -9001,13 +9004,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
           </thead>
           <tbody>
             ${(() => {
-              const completedList = list.filter(sig => sig.status === 'target1' || sig.status === 'target2');
+              const completedList = list.filter(sig => ['target1', 'target2', 'target3', 'target4'].includes(sig.status) || String(sig.status || '').startsWith('target'));
               if (completedList.length === 0) {
                 return `<tr><td colspan="9" style="padding: 15px; text-align: center; color: #64748b; font-weight: bold;">لا توجد توصيات محققة للأهداف حالياً لعرضها في الجدول</td></tr>`;
               }
               return completedList.map((sig, idx) => {
-                const statusLbl = sig.status === 'target2' ? 'حقق Target 2 🚀' : sig.status === 'target1' ? 'حقق Target 1 🎯' : sig.status === 'stop_loss' ? 'وقف خسارة 🛑' : sig.status === 'cancelled' ? 'ملغاة ❌' : 'سارية ⏳';
-                const badgeClass = sig.status === 'target2' ? 'badge-t2' : sig.status === 'target1' ? 'badge-t1' : sig.status === 'stop_loss' ? 'badge-sl' : 'badge-active';
+                const statusLbl = sig.status === 'target4' ? 'حقق Target 4 💎' : sig.status === 'target3' ? 'حقق Target 3 🌟' : sig.status === 'target2' ? 'حقق Target 2 🚀' : sig.status === 'target1' ? 'حقق Target 1 🎯' : sig.status === 'stop_loss' ? 'وقف خسارة 🛑' : sig.status === 'cancelled' ? 'ملغاة ❌' : 'سارية ⏳';
+                const badgeClass = (sig.status === 'target2' || sig.status === 'target3' || sig.status === 'target4') ? 'badge-t2' : sig.status === 'target1' ? 'badge-t1' : sig.status === 'stop_loss' ? 'badge-sl' : 'badge-active';
                 return `
                   <tr>
                     <td>${idx + 1}</td>
@@ -9530,10 +9533,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
       const total = list.length;
       const t1Count = list.filter(s => s.status === 'target1').length;
       const t2Count = list.filter(s => s.status === 'target2').length;
+      const t3Count = list.filter(s => s.status === 'target3').length;
+      const t4Count = list.filter(s => s.status === 'target4').length;
+      const otherTargets = list.filter(s => String(s.status || '').startsWith('target') && !['target1','target2','target3','target4'].includes(s.status)).length;
       const slCount = list.filter(s => s.status === 'stop_loss').length;
-      const winCount = t1Count + t2Count;
+      const winCount = t1Count + t2Count + t3Count + t4Count + otherTargets;
       const closedCount = winCount + slCount;
-      const activeCount = list.filter(s => s.status !== 'target1' && s.status !== 'target2' && s.status !== 'stop_loss').length;
+      const activeCount = list.filter(s => s.status === 'active' || (!['target1', 'target2', 'target3', 'target4', 'stop_loss', 'cancelled'].includes(s.status) && !String(s.status || '').startsWith('target'))).length;
       const winRate = total > 0 ? Math.round((winCount / total) * 100) : 0;
 
       const now = new Date();
@@ -9607,13 +9613,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
     </thead>
     <tbody>
       ${(() => {
-        const completedList = list.filter(sig => sig.status === 'target1' || sig.status === 'target2');
+        const completedList = list.filter(sig => ['target1', 'target2', 'target3', 'target4'].includes(sig.status) || String(sig.status || '').startsWith('target'));
         if (completedList.length === 0) {
           return `<tr><td colspan="9" style="padding: 15px; text-align: center; color: #64748b; font-weight: bold;">لا توجد توصيات محققة للأهداف حالياً لعرضها في الجدول</td></tr>`;
         }
         return completedList.map((sig, idx) => {
-          const statusLbl = sig.status === 'target2' ? 'حقق Target 2 🚀' : sig.status === 'target1' ? 'حقق Target 1 🎯' : sig.status === 'stop_loss' ? 'وقف خسارة 🛑' : sig.status === 'cancelled' ? 'ملغاة ❌' : 'سارية ⏳';
-          const badgeClass = sig.status === 'target2' ? 'badge-t2' : sig.status === 'target1' ? 'badge-t1' : sig.status === 'stop_loss' ? 'badge-sl' : 'badge-active';
+          const statusLbl = sig.status === 'target4' ? 'حقق Target 4 💎' : sig.status === 'target3' ? 'حقق Target 3 🌟' : sig.status === 'target2' ? 'حقق Target 2 🚀' : sig.status === 'target1' ? 'حقق Target 1 🎯' : sig.status === 'stop_loss' ? 'وقف خسارة 🛑' : sig.status === 'cancelled' ? 'ملغاة ❌' : 'سارية ⏳';
+          const badgeClass = (sig.status === 'target2' || sig.status === 'target3' || sig.status === 'target4') ? 'badge-t2' : sig.status === 'target1' ? 'badge-t1' : sig.status === 'stop_loss' ? 'badge-sl' : 'badge-active';
           return `
             <tr>
               <td>${idx + 1}</td>
@@ -15248,10 +15254,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                 const totalS = saudiRecommendations.length;
                 const t1S = saudiRecommendations.filter(s => s.status === 'target1').length;
                 const t2S = saudiRecommendations.filter(s => s.status === 'target2').length;
+                const t3S = saudiRecommendations.filter(s => s.status === 'target3').length;
+                const t4S = saudiRecommendations.filter(s => s.status === 'target4').length;
+                const otherTargetsS = saudiRecommendations.filter(s => String(s.status || '').startsWith('target') && !['target1','target2','target3','target4'].includes(s.status)).length;
                 const slS = saudiRecommendations.filter(s => s.status === 'stop_loss').length;
-                const winCountS = t1S + t2S;
+                const winCountS = t1S + t2S + t3S + t4S + otherTargetsS;
                 const closedS = winCountS + slS;
-                const activeS = saudiRecommendations.filter(s => s.status !== 'target1' && s.status !== 'target2' && s.status !== 'stop_loss').length;
+                const activeS = saudiRecommendations.filter(s => s.status === 'active' || (!['target1', 'target2', 'target3', 'target4', 'stop_loss', 'cancelled'].includes(s.status) && !String(s.status || '').startsWith('target'))).length;
                 const winRateS = totalS > 0 ? Math.round((winCountS / totalS) * 100) : 0;
 
                 return (
@@ -15720,10 +15729,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                 const totalU = usRecommendations.length;
                 const t1U = usRecommendations.filter(s => s.status === 'target1').length;
                 const t2U = usRecommendations.filter(s => s.status === 'target2').length;
+                const t3U = usRecommendations.filter(s => s.status === 'target3').length;
+                const t4U = usRecommendations.filter(s => s.status === 'target4').length;
+                const otherTargetsU = usRecommendations.filter(s => String(s.status || '').startsWith('target') && !['target1','target2','target3','target4'].includes(s.status)).length;
                 const slU = usRecommendations.filter(s => s.status === 'stop_loss').length;
-                const winCountU = t1U + t2U;
+                const winCountU = t1U + t2U + t3U + t4U + otherTargetsU;
                 const closedU = winCountU + slU;
-                const activeU = usRecommendations.filter(s => s.status !== 'target1' && s.status !== 'target2' && s.status !== 'stop_loss').length;
+                const activeU = usRecommendations.filter(s => s.status === 'active' || (!['target1', 'target2', 'target3', 'target4', 'stop_loss', 'cancelled'].includes(s.status) && !String(s.status || '').startsWith('target'))).length;
                 const winRateU = totalU > 0 ? Math.round((winCountU / totalU) * 100) : 0;
 
                 return (
