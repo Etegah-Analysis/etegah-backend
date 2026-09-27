@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Play, Award, Sparkles, Video, ArrowLeft, FileText, Download, Calendar, Clock, ExternalLink, ShieldCheck, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { db, collection, onSnapshot, deleteDoc, doc } from '../firebase';
 import { toast } from 'react-hot-toast';
 
@@ -10,6 +10,40 @@ export default function PlatformVideos() {
   const [loading, setLoading] = useState(true);
   const [selectedPdfReport, setSelectedPdfReport] = useState(null);
   const isEmp = localStorage.getItem('isEmpLoggedIn') === 'true' || localStorage.getItem('visitorName')?.includes('Admin') || localStorage.getItem('visitorName')?.includes('إدارة');
+
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const targetMarketKey = location.state?.autoOpenMarket || searchParams.get('market');
+
+  useEffect(() => {
+    if (!targetMarketKey || loading) return;
+
+    const REPORT_TITLES_MAP = {
+      saudi: 'التقرير الأسبوعي للسوق السعودي 🇸🇦',
+      us: 'التقرير الأسبوعي للسوق الأمريكي 🇺🇸',
+      saudi_open: 'تقرير الافتتاح للسوق السعودي 🇸🇦',
+      saudi_close: 'تقرير الإغلاق للسوق السعودي 🇸🇦',
+      us_open: 'تقرير الافتتاح للسوق الأمريكي 🇺🇸',
+      us_close: 'تقرير الإغلاق للسوق الأمريكي 🇺🇸',
+    };
+
+    const reportObj = reports[targetMarketKey];
+    if (reportObj && reportObj.pdfUrl) {
+      setSelectedPdfReport({
+        title: REPORT_TITLES_MAP[targetMarketKey] || reportObj.title || 'التقرير المعتمد 📄',
+        pdfUrl: reportObj.pdfUrl,
+        uploadedAtFormatted: reportObj.uploadedAtFormatted,
+        uploadedBy: reportObj.uploadedBy
+      });
+
+      setTimeout(() => {
+        const targetElement = document.getElementById(`card-${targetMarketKey}`);
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+    }
+  }, [reports, loading, targetMarketKey, location.key, location.search, location.state]);
 
   useEffect(() => {
     document.title = 'تقارير رؤية الافتتاح والإغلاق وتقرير نتائج المنصة السابقة - اتجاه للتحليل الذكي';
@@ -133,7 +167,7 @@ export default function PlatformVideos() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Card 1: Saudi Market Weekly Report */}
-            <div className="bg-gradient-to-br from-slate-950/90 via-emerald-950/30 to-slate-950/90 backdrop-blur-xl border border-emerald-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-emerald-400/60 transition group">
+            <div id="card-saudi" className="bg-gradient-to-br from-slate-950/90 via-emerald-950/30 to-slate-950/90 backdrop-blur-xl border border-emerald-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-emerald-400/60 transition group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
               <div>
@@ -198,7 +232,7 @@ export default function PlatformVideos() {
             </div>
 
             {/* Card 2: US Market Weekly Report */}
-            <div className="bg-gradient-to-br from-slate-950/90 via-blue-950/30 to-slate-950/90 backdrop-blur-xl border border-blue-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-blue-400/60 transition group">
+            <div id="card-us" className="bg-gradient-to-br from-slate-950/90 via-blue-950/30 to-slate-950/90 backdrop-blur-xl border border-blue-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-blue-400/60 transition group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
               <div>
@@ -287,7 +321,7 @@ export default function PlatformVideos() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Card 1: Saudi Opening Report */}
-            <div className="bg-gradient-to-br from-slate-950/90 via-emerald-950/30 to-slate-950/90 backdrop-blur-xl border border-emerald-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-emerald-400/60 transition group">
+            <div id="card-saudi_open" className="bg-gradient-to-br from-slate-950/90 via-emerald-950/30 to-slate-950/90 backdrop-blur-xl border border-emerald-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-emerald-400/60 transition group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
               <div>
@@ -350,7 +384,7 @@ export default function PlatformVideos() {
             </div>
 
             {/* Card 2: Saudi Closing Report */}
-            <div className="bg-gradient-to-br from-slate-950/90 via-teal-950/30 to-slate-950/90 backdrop-blur-xl border border-teal-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-teal-400/60 transition group">
+            <div id="card-saudi_close" className="bg-gradient-to-br from-slate-950/90 via-teal-950/30 to-slate-950/90 backdrop-blur-xl border border-teal-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-teal-400/60 transition group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
               <div>
@@ -413,7 +447,7 @@ export default function PlatformVideos() {
             </div>
 
             {/* Card 3: US Opening Report */}
-            <div className="bg-gradient-to-br from-slate-950/90 via-blue-950/30 to-slate-950/90 backdrop-blur-xl border border-blue-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-blue-400/60 transition group">
+            <div id="card-us_open" className="bg-gradient-to-br from-slate-950/90 via-blue-950/30 to-slate-950/90 backdrop-blur-xl border border-blue-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-blue-400/60 transition group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
               <div>
@@ -476,7 +510,7 @@ export default function PlatformVideos() {
             </div>
 
             {/* Card 4: US Closing Report */}
-            <div className="bg-gradient-to-br from-slate-950/90 via-cyan-950/30 to-slate-950/90 backdrop-blur-xl border border-cyan-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-cyan-400/60 transition group">
+            <div id="card-us_close" className="bg-gradient-to-br from-slate-950/90 via-cyan-950/30 to-slate-950/90 backdrop-blur-xl border border-cyan-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-cyan-400/60 transition group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
               <div>
