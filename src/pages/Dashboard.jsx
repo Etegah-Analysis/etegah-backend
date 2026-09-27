@@ -6585,10 +6585,12 @@ const Dashboard = () => {
     try {
       let blob = null;
       let contentType = 'image/jpeg';
+      let isPdf = false;
       if (typeof fileOrBase64 === 'string' && fileOrBase64.startsWith('data:')) {
         const parts = fileOrBase64.split(',');
         const mimeMatch = parts[0].match(/:(.*?);/);
         if (mimeMatch) contentType = mimeMatch[1];
+        if (contentType.includes('pdf')) isPdf = true;
         const bstr = atob(parts[1]);
         let n = bstr.length;
         const u8arr = new Uint8Array(n);
@@ -6598,15 +6600,19 @@ const Dashboard = () => {
         blob = new Blob([u8arr], { type: contentType });
       } else if (fileOrBase64 instanceof File || fileOrBase64 instanceof Blob) {
         blob = fileOrBase64;
-        contentType = fileOrBase64.type || 'image/jpeg';
+        contentType = fileOrBase64.type || '';
+        if (contentType.includes('pdf') || (fileOrBase64.name && fileOrBase64.name.toLowerCase().endsWith('.pdf'))) {
+          isPdf = true;
+          contentType = 'application/pdf';
+        }
       }
 
       if (blob && storage) {
-        const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('png') ? 'png' : 'jpg';
+        const ext = isPdf ? 'pdf' : contentType.includes('png') ? 'png' : 'jpg';
         const cleanName = String(filenamePrefix || 'rcpt').replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 20) || 'rcpt';
         const safePath = `subscription_receipts/${cleanName}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
         const storageRef = ref(storage, safePath);
-        const snapshot = await uploadBytes(storageRef, blob);
+        const snapshot = await uploadBytes(storageRef, blob, { contentType: isPdf ? 'application/pdf' : (contentType || 'image/jpeg') });
         const downloadUrl = await getDownloadURL(snapshot.ref);
         if (downloadUrl) return downloadUrl;
       }
@@ -6662,7 +6668,7 @@ const Dashboard = () => {
     const toastId = toast.loading('جاري معالجة وتجهيز ملف الإشعار...');
     try {
       const uploadedUrl = await uploadReceiptFileToStorage(fileOrDataUrl, selectedSubCustomer?.name || 'rcpt');
-      if (uploadedUrl && (uploadedUrl.startsWith('http://') || uploadedUrl.startsWith('https://'))) {
+      if (typeof uploadedUrl === 'string' && (uploadedUrl.startsWith('http://') || uploadedUrl.startsWith('https://'))) {
         setSubReceiptFileUrl(uploadedUrl);
         toast.success('تم رفع الإشعار وتخزينه سحابياً بنجاح ☁️📄', { id: toastId });
         return;
@@ -6672,7 +6678,7 @@ const Dashboard = () => {
         const reader = new FileReader();
         reader.onload = async (ev) => {
           const rawResult = ev.target.result;
-          if (typeof rawResult === 'string' && rawResult.startsWith('data:application/pdf')) {
+          if (typeof rawResult === 'string' && (rawResult.startsWith('data:application/pdf') || fileOrDataUrl.type?.includes('pdf') || fileOrDataUrl.name?.toLowerCase().endsWith('.pdf'))) {
             setSubReceiptFileUrl(rawResult);
             toast.success('تم إرفاق ملف PDF إشعار التحويل بنجاح 📄', { id: toastId });
           } else {
@@ -6681,19 +6687,24 @@ const Dashboard = () => {
             toast.success('تم معالجة وتجهيز صورة الإشعار بنجاح 📄✨', { id: toastId });
           }
         };
+        reader.onerror = () => {
+          toast.error('حدث خطأ أثناء قراءة الملف من الجهاز', { id: toastId });
+        };
         reader.readAsDataURL(fileOrDataUrl);
         return;
       }
 
-      if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:application/pdf')) {
-        setSubReceiptFileUrl(fileOrDataUrl);
-        toast.success('تم إرفاق ملف PDF إشعار التحويل بنجاح 📄', { id: toastId });
+      if (typeof fileOrDataUrl === 'string') {
+        if (fileOrDataUrl.startsWith('data:application/pdf')) {
+          setSubReceiptFileUrl(fileOrDataUrl);
+          toast.success('تم إرفاق ملف PDF إشعار التحويل بنجاح 📄', { id: toastId });
+          return;
+        }
+        const compressed = await compressReceiptImage(fileOrDataUrl, 1400, 0.80);
+        setSubReceiptFileUrl(compressed || fileOrDataUrl);
+        toast.success('تم معالجة صورة الإشعار بنجاح 📄✨', { id: toastId });
         return;
       }
-
-      const compressed = await compressReceiptImage(fileOrDataUrl, 1400, 0.80);
-      setSubReceiptFileUrl(compressed || fileOrDataUrl);
-      toast.success('تم معالجة صورة الإشعار بنجاح 📄✨', { id: toastId });
     } catch (err) {
       console.error('Error processing receipt image:', err);
       toast.error('تعذر معالجة الملف', { id: toastId });
@@ -6702,14 +6713,16 @@ const Dashboard = () => {
 
   const handleSubscriptionModalPaste = (e) => {
     const items = e.clipboardData?.items;
-    if (items) {
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const file = items[i].getAsFile();
-          if (file) {
-            handleProcessAndSetReceiptImage(file);
-            break;
-          }
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1 || item.type.indexOf('pdf') !== -1 || item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          handleProcessAndSetReceiptImage(file);
+          toast.success('تم لصق ملف الإشعار من الحافظة (Ctrl + V) بنجاح 📋✨');
+          break;
         }
       }
     }
@@ -21697,9 +21710,14 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     {subReceiptFileUrl ? (
                       <div className="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-emerald-500/40 gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          {subReceiptFileUrl.startsWith('data:application/pdf') ? (
-                            <div className="w-12 h-12 rounded-lg bg-rose-950/80 border border-rose-500/50 flex items-center justify-center text-rose-300 font-mono text-xs font-bold shrink-0">
-                              PDF 📄
+                          {(typeof subReceiptFileUrl === 'string' && (subReceiptFileUrl.startsWith('data:application/pdf') || subReceiptFileUrl.toLowerCase().includes('.pdf'))) ? (
+                            <div 
+                              className="w-12 h-12 rounded-lg bg-rose-950/80 border border-rose-500/50 flex flex-col items-center justify-center text-rose-300 font-mono text-xs font-bold shrink-0 cursor-pointer hover:bg-rose-900 transition"
+                              onClick={() => window.open(subReceiptFileUrl, '_blank')}
+                              title="انقر لفتح ملف PDF الإشعار"
+                            >
+                              <span className="text-[10px]">PDF</span>
+                              <span className="text-[12px]">📄</span>
                             </div>
                           ) : (
                             <img 
