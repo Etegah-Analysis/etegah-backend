@@ -5,7 +5,7 @@ import { db, collection, onSnapshot, deleteDoc, doc } from '../firebase';
 import { toast } from 'react-hot-toast';
 
 export default function PlatformVideos() {
-  const [reports, setReports] = useState({ saudi: null, us: null });
+  const [reports, setReports] = useState({ saudi: null, us: null, saudi_open: null, saudi_close: null, us_open: null, us_close: null });
   const [videoList, setVideoList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPdfReport, setSelectedPdfReport] = useState(null);
@@ -15,28 +15,32 @@ export default function PlatformVideos() {
     document.title = 'تقارير رؤية الافتتاح والإغلاق وتقرير نتائج المنصة السابقة - اتجاه للتحليل الذكي';
 
     const unsubReports = onSnapshot(collection(db, 'weekly_reports'), (snapshot) => {
-      const reportsMap = { saudi: null, us: null };
+      const reportsMap = { saudi: null, us: null, saudi_open: null, saudi_close: null, us_open: null, us_close: null };
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
         if (!data) return;
 
-        const isSaudi = data.market === 'saudi' || docSnap.id === 'saudi_latest' || docSnap.id === 'saudi';
-        const isUs = data.market === 'us' || docSnap.id === 'us_latest' || docSnap.id === 'us';
+        const id = docSnap.id;
+        const m = data.market || id;
 
-        if (isSaudi) {
-          if (data.pdfUrl && data.pdfUrl.trim().length > 5) {
-            reportsMap.saudi = data;
-          } else if (!reportsMap.saudi) {
-            reportsMap.saudi = data;
-          }
-        }
-
-        if (isUs) {
-          if (data.pdfUrl && data.pdfUrl.trim().length > 5) {
-            reportsMap.us = data;
-          } else if (!reportsMap.us) {
-            reportsMap.us = data;
-          }
+        if (id === 'saudi_open' || id === 'saudi_open_latest' || m === 'saudi_open') {
+          if (data.pdfUrl && data.pdfUrl.trim().length > 5) reportsMap.saudi_open = data;
+          else if (!reportsMap.saudi_open) reportsMap.saudi_open = data;
+        } else if (id === 'saudi_close' || id === 'saudi_close_latest' || m === 'saudi_close') {
+          if (data.pdfUrl && data.pdfUrl.trim().length > 5) reportsMap.saudi_close = data;
+          else if (!reportsMap.saudi_close) reportsMap.saudi_close = data;
+        } else if (id === 'us_open' || id === 'us_open_latest' || m === 'us_open') {
+          if (data.pdfUrl && data.pdfUrl.trim().length > 5) reportsMap.us_open = data;
+          else if (!reportsMap.us_open) reportsMap.us_open = data;
+        } else if (id === 'us_close' || id === 'us_close_latest' || m === 'us_close') {
+          if (data.pdfUrl && data.pdfUrl.trim().length > 5) reportsMap.us_close = data;
+          else if (!reportsMap.us_close) reportsMap.us_close = data;
+        } else if (id === 'saudi_latest' || id === 'saudi' || m === 'saudi') {
+          if (data.pdfUrl && data.pdfUrl.trim().length > 5) reportsMap.saudi = data;
+          else if (!reportsMap.saudi) reportsMap.saudi = data;
+        } else if (id === 'us_latest' || id === 'us' || m === 'us') {
+          if (data.pdfUrl && data.pdfUrl.trim().length > 5) reportsMap.us = data;
+          else if (!reportsMap.us) reportsMap.us = data;
         }
       });
       setReports(reportsMap);
@@ -94,7 +98,7 @@ export default function PlatformVideos() {
           </h1>
 
           <p className="text-xs sm:text-sm text-cyan-200 max-w-2xl mx-auto leading-relaxed">
-            استعرض التقرير الأسبوعي الشامل للسوق السعودي والأمريكي (PDF) والتحليلات الشاملة لنتائج منصة اتجاه.
+            استعرض التقرير الأسبوعي الشامل للسوق السعودي والأمريكي (PDF) وتقارير الافتتاح والإغلاق والتحليلات الشاملة لنتائج منصة اتجاه.
           </p>
 
           <div className="mt-6 flex justify-center">
@@ -242,6 +246,282 @@ export default function PlatformVideos() {
                       uploadedBy: reports.us.uploadedBy
                     })}
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
+                  >
+                    <Download size={16} />
+                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <ExternalLink size={14} className="opacity-80" />
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-500 font-bold text-xs cursor-not-allowed"
+                  >
+                    <span>📄 التقرير غير متاح حالياً</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Section 2: Opening & Closing Session PDF Reports (تقارير الافتتاح والإغلاق 📈) */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center gap-3 border-b border-cyan-500/20 pb-3">
+            <div className="p-2.5 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 shadow-md">
+              <Clock size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-emerald-300 flex items-center gap-2">
+                <span>تقارير الافتتاح والإغلاق اليومية 📈</span>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-300">
+                  جلسات السوق السعودي والأمريكي
+                </span>
+              </h2>
+              <p className="text-xs text-slate-300 mt-0.5">
+                تقارير معتمدة لمتابعة رؤية ترقبات افتتاح وإغلاق الجلسات اليومية وتوثيق حركة الدعوم والمقاومات فوراً.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Card 1: Saudi Opening Report */}
+            <div className="bg-gradient-to-br from-slate-950/90 via-emerald-950/30 to-slate-950/90 backdrop-blur-xl border border-emerald-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-emerald-400/60 transition group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🇸🇦</span>
+                    <h3 className="text-base sm:text-lg font-extrabold text-emerald-300">تقرير الافتتاح للسوق السعودي</h3>
+                  </div>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center gap-1">
+                    <ShieldCheck size={13} />
+                    <span>تقرير معتمد</span>
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  تقرير تحليلي لرؤية وترقبات افتتاح الجلسة للسوق السعودي وتحديد أهم مستويات الدعم والمقاومة لأسهم تاسي.
+                </p>
+
+                <div className="bg-slate-900/80 rounded-2xl p-3.5 border border-emerald-500/20 mb-5 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-emerald-200">
+                    <Clock size={14} className="text-emerald-400 shrink-0" />
+                    <span className="font-semibold">تاريخ ووقت الرفع على الموقع:</span>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-emerald-300 pr-5 dir-rtl">
+                    {reports.saudi_open?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير افتتاح بعد')}
+                  </div>
+                  {reports.saudi_open?.uploadedBy && (
+                    <div className="text-[10px] text-slate-400 pr-5">
+                      تم الرفع بواسطة: <span className="text-emerald-200 font-semibold">{reports.saudi_open.uploadedBy}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                {reports.saudi_open?.pdfUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPdfReport({
+                      title: 'تقرير الافتتاح للسوق السعودي 🇸🇦',
+                      pdfUrl: reports.saudi_open.pdfUrl,
+                      uploadedAtFormatted: reports.saudi_open.uploadedAtFormatted,
+                      uploadedBy: reports.saudi_open.uploadedBy
+                    })}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
+                  >
+                    <Download size={16} />
+                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <ExternalLink size={14} className="opacity-80" />
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-500 font-bold text-xs cursor-not-allowed"
+                  >
+                    <span>📄 التقرير غير متاح حالياً</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Card 2: Saudi Closing Report */}
+            <div className="bg-gradient-to-br from-slate-950/90 via-teal-950/30 to-slate-950/90 backdrop-blur-xl border border-teal-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-teal-400/60 transition group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🇸🇦</span>
+                    <h3 className="text-base sm:text-lg font-extrabold text-teal-300">تقرير الإغلاق للسوق السعودي</h3>
+                  </div>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/40 text-teal-300 flex items-center gap-1">
+                    <ShieldCheck size={13} />
+                    <span>تقرير معتمد</span>
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  ملخص تحليلي شامل لإغلاق الجلسة وتوثيق أداء الصفقات والأهداف المحققة لمؤشر تاسي والأسهم السعودية.
+                </p>
+
+                <div className="bg-slate-900/80 rounded-2xl p-3.5 border border-teal-500/20 mb-5 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-teal-200">
+                    <Clock size={14} className="text-teal-400 shrink-0" />
+                    <span className="font-semibold">تاريخ ووقت الرفع على الموقع:</span>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-teal-300 pr-5 dir-rtl">
+                    {reports.saudi_close?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير إغلاق بعد')}
+                  </div>
+                  {reports.saudi_close?.uploadedBy && (
+                    <div className="text-[10px] text-slate-400 pr-5">
+                      تم الرفع بواسطة: <span className="text-teal-200 font-semibold">{reports.saudi_close.uploadedBy}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                {reports.saudi_close?.pdfUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPdfReport({
+                      title: 'تقرير الإغلاق للسوق السعودي 🇸🇦',
+                      pdfUrl: reports.saudi_close.pdfUrl,
+                      uploadedAtFormatted: reports.saudi_close.uploadedAtFormatted,
+                      uploadedBy: reports.saudi_close.uploadedBy
+                    })}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
+                  >
+                    <Download size={16} />
+                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <ExternalLink size={14} className="opacity-80" />
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-500 font-bold text-xs cursor-not-allowed"
+                  >
+                    <span>📄 التقرير غير متاح حالياً</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Card 3: US Opening Report */}
+            <div className="bg-gradient-to-br from-slate-950/90 via-blue-950/30 to-slate-950/90 backdrop-blur-xl border border-blue-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-blue-400/60 transition group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🇺🇸</span>
+                    <h3 className="text-base sm:text-lg font-extrabold text-blue-300">تقرير الافتتاح للسوق الأمريكي</h3>
+                  </div>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 flex items-center gap-1">
+                    <ShieldCheck size={13} />
+                    <span>تقرير معتمد</span>
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  تحليل قبيل افتتاح الجلسة الأمريكية وترقبات مؤشرات S&P 500 و Nasdaq وأقوى الفرص المتاحة وعقود الأوبشن.
+                </p>
+
+                <div className="bg-slate-900/80 rounded-2xl p-3.5 border border-blue-500/20 mb-5 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-blue-200">
+                    <Clock size={14} className="text-blue-400 shrink-0" />
+                    <span className="font-semibold">تاريخ ووقت الرفع على الموقع:</span>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-blue-300 pr-5 dir-rtl">
+                    {reports.us_open?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير افتتاح بعد')}
+                  </div>
+                  {reports.us_open?.uploadedBy && (
+                    <div className="text-[10px] text-slate-400 pr-5">
+                      تم الرفع بواسطة: <span className="text-blue-200 font-semibold">{reports.us_open.uploadedBy}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                {reports.us_open?.pdfUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPdfReport({
+                      title: 'تقرير الافتتاح للسوق الأمريكي 🇺🇸',
+                      pdfUrl: reports.us_open.pdfUrl,
+                      uploadedAtFormatted: reports.us_open.uploadedAtFormatted,
+                      uploadedBy: reports.us_open.uploadedBy
+                    })}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
+                  >
+                    <Download size={16} />
+                    <span>📄 عرض / تحميل التقرير (PDF)</span>
+                    <ExternalLink size={14} className="opacity-80" />
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-slate-500 font-bold text-xs cursor-not-allowed"
+                  >
+                    <span>📄 التقرير غير متاح حالياً</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Card 4: US Closing Report */}
+            <div className="bg-gradient-to-br from-slate-950/90 via-cyan-950/30 to-slate-950/90 backdrop-blur-xl border border-cyan-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between hover:border-cyan-400/60 transition group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🇺🇸</span>
+                    <h3 className="text-base sm:text-lg font-extrabold text-cyan-300">تقرير الإغلاق للسوق الأمريكي</h3>
+                  </div>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 flex items-center gap-1">
+                    <ShieldCheck size={13} />
+                    <span>تقرير معتمد</span>
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  مراجعة إغلاق الأسواق الأمريكية والنتائج التفصيلية لصفقات الأسهم والعقود والأرباح التراكمية اليومية.
+                </p>
+
+                <div className="bg-slate-900/80 rounded-2xl p-3.5 border border-cyan-500/20 mb-5 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-cyan-200">
+                    <Clock size={14} className="text-cyan-400 shrink-0" />
+                    <span className="font-semibold">تاريخ ووقت الرفع على الموقع:</span>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-cyan-300 pr-5 dir-rtl">
+                    {reports.us_close?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير إغلاق بعد')}
+                  </div>
+                  {reports.us_close?.uploadedBy && (
+                    <div className="text-[10px] text-slate-400 pr-5">
+                      تم الرفع بواسطة: <span className="text-cyan-200 font-semibold">{reports.us_close.uploadedBy}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                {reports.us_close?.pdfUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPdfReport({
+                      title: 'تقرير الإغلاق للسوق الأمريكي 🇺🇸',
+                      pdfUrl: reports.us_close.pdfUrl,
+                      uploadedAtFormatted: reports.us_close.uploadedAtFormatted,
+                      uploadedBy: reports.us_close.uploadedBy
+                    })}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
                     <Download size={16} />
                     <span>📄 عرض / تحميل التقرير (PDF)</span>
