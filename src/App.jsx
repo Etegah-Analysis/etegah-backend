@@ -76,16 +76,14 @@ function App() {
 
         // When logged in, listen to their document to enforce deactivation/deletion in real-time
         // Skip this check for the admin since they might not have a document in the users collection
-        if (currentUser.email?.toLowerCase() !== 'etegahanalysis@gmail.com') {
+        const isUserAdmin = Boolean(currentUser.email && ['etegahanalysis@gmail.com', 'mohamed.gamal.work0@gmail.com', 'admin@etegah.com'].includes(currentUser.email.toLowerCase()));
+        if (!isUserAdmin) {
           docUnsub = onSnapshot(doc(db, 'users', currentUser.uid), (docSnap) => {
             if (docSnap.exists()) {
                const data = docSnap.data();
                if (data.isActive === false) {
                    signOut(auth);
                }
-            } else {
-               // If document doesn't exist, sign out
-               signOut(auth);
             }
           });
         }
