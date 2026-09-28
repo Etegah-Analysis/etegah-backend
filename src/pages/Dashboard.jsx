@@ -6618,9 +6618,10 @@ const Dashboard = () => {
   const getPdfBlobUrl = (url) => {
     if (!url || typeof url !== 'string') return url;
     if (url.startsWith('blob:')) return url;
+    if (!isPdfUrl(url)) return url;
     
     let base64 = '';
-    if (url.startsWith('data:application/pdf') || url.startsWith('data:application/x-pdf') || (url.startsWith('data:') && (url.includes('JVBERi') || url.toLowerCase().includes('pdf')))) {
+    if (url.startsWith('data:application/pdf') || url.startsWith('data:application/x-pdf') || (url.startsWith('data:') && url.includes('JVBERi'))) {
       base64 = url.includes(',') ? url.split(',')[1] : url;
     } else if (url.startsWith('JVBERi')) {
       base64 = url;
@@ -6647,12 +6648,18 @@ const Dashboard = () => {
   const isPdfUrl = (url) => {
     if (!url || typeof url !== 'string') return false;
     const lower = url.toLowerCase();
-    if (lower.startsWith('blob:')) return true;
-    if (lower.startsWith('data:application/pdf') || lower.startsWith('data:application/x-pdf')) return true;
+    
+    // Explicit Image Checks -> NEVER treat images as PDF
     if (lower.startsWith('data:image/')) return false;
+    if (/\.(jpg|jpeg|png|webp|gif|bmp)(\?|$)/i.test(lower)) return false;
+    if (url.startsWith('data:') && (url.includes('iVBORw') || url.includes('/9j/') || url.includes('UklGR'))) return false;
+    if (url.startsWith('iVBORw') || url.startsWith('/9j/') || url.startsWith('UklGR')) return false;
+
+    // Explicit PDF Checks
+    if (lower.startsWith('data:application/pdf') || lower.startsWith('data:application/x-pdf')) return true;
     if (/\.pdf(\?|$)/i.test(lower)) return true;
-    if (url.startsWith('data:') && (url.includes('JVBERi') || lower.includes('pdf'))) return true;
-    if (url.startsWith('JVBERi')) return true;
+    if (url.startsWith('JVBERi') || (url.startsWith('data:') && url.includes('JVBERi'))) return true;
+
     return false;
   };
 
@@ -6681,7 +6688,7 @@ const Dashboard = () => {
               }
             }
 
-            if (typeof fullData === 'string' && fullData.length > 50) {
+            if (typeof fullData === 'string' && fullData.length > 20) {
               if (fullData.startsWith('JVBERi')) {
                 fullData = 'data:application/pdf;base64,' + fullData;
               } else if (fullData.startsWith('data:') && !fullData.startsWith('data:application/pdf') && (fullData.includes('JVBERi') || fullData.toLowerCase().includes('pdf'))) {
@@ -6696,7 +6703,7 @@ const Dashboard = () => {
         } catch (err) {
           console.error('Error fetching receipt_files document:', err);
         }
-        return ''; // Return empty string so it doesn't failback to SPA index.html!
+        return '';
       }
     }
     if (isPdfUrl(trimmed)) {
@@ -6715,7 +6722,7 @@ const Dashboard = () => {
         const resolved = await resolveReceiptUrl(itemUrl);
         toast.dismiss(toastId);
         if (resolved) {
-          setLightboxImage({ url: getPdfBlobUrl(resolved), title: itemTitle });
+          setLightboxImage({ url: isPdfUrl(resolved) ? getPdfBlobUrl(resolved) : resolved, title: itemTitle });
         } else {
           toast.error('عذراً، لم يتم العثور على الإشعار المرفق في السحابة ⚠️');
           setLightboxImage({ url: '', title: itemTitle });
@@ -6725,7 +6732,7 @@ const Dashboard = () => {
         toast.error('حدث خطأ أثناء فتح الإشعار ⚠️');
       }
     } else {
-      setLightboxImage({ url: getPdfBlobUrl(itemUrl), title: itemTitle });
+      setLightboxImage({ url: isPdfUrl(itemUrl) ? getPdfBlobUrl(itemUrl) : itemUrl, title: itemTitle });
     }
   };
 
@@ -6737,7 +6744,7 @@ const Dashboard = () => {
           if (resolved && resolved !== rawUrl) {
             setLightboxImage(prev => {
               if (!prev) return null;
-              const formattedUrl = getPdfBlobUrl(resolved);
+              const formattedUrl = isPdfUrl(resolved) ? getPdfBlobUrl(resolved) : resolved;
               return typeof prev === 'string' ? formattedUrl : { ...prev, url: formattedUrl };
             });
           }
@@ -24555,28 +24562,17 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     <span className="text-sm font-bold">جاري تحميل إشعار التحويل من السحابة... ⏳</span>
                   </div>
                 ) : isPdfUrl(lightboxImage.url || lightboxImage) ? (
-                  <object 
-                    data={lightboxImage.url || lightboxImage} 
-                    type="application/pdf" 
-                    className="w-full h-[70vh] rounded-xl border border-emerald-500/40 bg-slate-900 shadow-2xl"
-                  >
-                    <embed 
-                      src={lightboxImage.url || lightboxImage} 
-                      type="application/pdf" 
-                      className="w-full h-[70vh] rounded-xl"
-                    />
-                    <div className="flex flex-col items-center justify-center p-8 text-center text-emerald-300 gap-3">
-                      <p className="text-sm font-bold text-slate-200">عذراً، يتعذر عرض ملف PDF داخل المعاينة السريعة للمتصفح.</p>
-                      <a 
-                        href={lightboxImage.url || lightboxImage} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold text-xs transition shadow-lg flex items-center gap-2 cursor-pointer"
-                      >
-                        📄 فتح ملف الـ PDF في نافذة جديدة مباشرة ↗️
-                      </a>
-                    </div>
-                  </object>
+                  <iframe 
+                    src={lightboxImage.url || lightboxImage} 
+                    title="PDF Receipt" 
+                    className="w-full h-[70vh] rounded-xl border border-emerald-500/40 bg-white shadow-2xl"
+                  />
+                ) : !(lightboxImage?.url || lightboxImage) ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-center text-rose-300 gap-3">
+                    <span className="text-3xl">⚠️</span>
+                    <span className="text-sm font-bold text-rose-200">عذراً، لم يتم العثور على ملف الإشعار المرفق في السحابة</span>
+                    <span className="text-xs text-gray-400">قد يكون ملف الإشعار قديم جداً أو يتعذر الوصول إليه حالياً</span>
+                  </div>
                 ) : (
                   <img 
                     src={lightboxImage.url || lightboxImage} 
