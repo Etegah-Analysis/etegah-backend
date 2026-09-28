@@ -6665,22 +6665,38 @@ const Dashboard = () => {
         try {
           const docSnap = await getDoc(doc(db, 'receipt_files', recId));
           if (docSnap.exists() && docSnap.data()) {
-            let data = docSnap.data().dataUrl || docSnap.data().url || docSnap.data().fileUrl || docSnap.data().base64;
-            if (typeof data === 'string') {
-              if (data.startsWith('JVBERi')) {
-                data = 'data:application/pdf;base64,' + data;
-              } else if (data.startsWith('data:') && !data.startsWith('data:application/pdf') && (data.includes('JVBERi') || data.toLowerCase().includes('pdf'))) {
-                data = data.replace(/^data:[^;]+;/, 'data:application/pdf;');
+            const snapData = docSnap.data();
+            let fullData = snapData.dataUrl || snapData.url || snapData.fileUrl || snapData.base64 || '';
+            const totalChunks = snapData.totalChunks || 1;
+            if (totalChunks > 1) {
+              const fetchPromises = [];
+              for (let i = 1; i < totalChunks; i++) {
+                fetchPromises.push(getDoc(doc(db, 'receipt_files', `${recId}_p${i}`)));
               }
-              if (isPdfUrl(data)) {
-                return getPdfBlobUrl(data);
+              const chunkSnaps = await Promise.all(fetchPromises);
+              for (const cSnap of chunkSnaps) {
+                if (cSnap.exists() && cSnap.data()?.dataUrl) {
+                  fullData += cSnap.data().dataUrl;
+                }
               }
             }
-            return data || trimmed;
+
+            if (typeof fullData === 'string' && fullData.length > 50) {
+              if (fullData.startsWith('JVBERi')) {
+                fullData = 'data:application/pdf;base64,' + fullData;
+              } else if (fullData.startsWith('data:') && !fullData.startsWith('data:application/pdf') && (fullData.includes('JVBERi') || fullData.toLowerCase().includes('pdf'))) {
+                fullData = fullData.replace(/^data:[^;]+;/, 'data:application/pdf;');
+              }
+              if (isPdfUrl(fullData)) {
+                return getPdfBlobUrl(fullData);
+              }
+              return fullData;
+            }
           }
         } catch (err) {
           console.error('Error fetching receipt_files document:', err);
         }
+        return ''; // Return empty string so it doesn't failback to SPA index.html!
       }
     }
     if (isPdfUrl(trimmed)) {
@@ -6701,7 +6717,8 @@ const Dashboard = () => {
         if (resolved) {
           setLightboxImage({ url: getPdfBlobUrl(resolved), title: itemTitle });
         } else {
-          toast.error('عذراً، لم يتم العثور على الإشعار المرفق ⚠️');
+          toast.error('عذراً، لم يتم العثور على الإشعار المرفق في السحابة ⚠️');
+          setLightboxImage({ url: '', title: itemTitle });
         }
       } catch (err) {
         toast.dismiss(toastId);
@@ -6764,12 +6781,25 @@ const Dashboard = () => {
       if (fileOrDataUrl.length > 100000) {
         try {
           const recId = 'rec_doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+          const chunkSize = 700000;
+          const numChunks = Math.ceil(fileOrDataUrl.length / chunkSize);
+          const writePromises = [];
+          for (let i = 0; i < numChunks; i++) {
+            const chunkData = fileOrDataUrl.substring(i * chunkSize, (i + 1) * chunkSize);
+            const chunkDocId = i === 0 ? recId : `${recId}_p${i}`;
+            writePromises.push(
+              setDoc(doc(db, 'receipt_files', chunkDocId), {
+                dataUrl: chunkData,
+                chunkIndex: i,
+                totalChunks: numChunks,
+                parentRecId: recId,
+                createdAt: serverTimestamp()
+              })
+            );
+          }
           await Promise.race([
-            setDoc(doc(db, 'receipt_files', recId), {
-              dataUrl: fileOrDataUrl,
-              createdAt: serverTimestamp()
-            }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore receipt_files timeout')), 3000))
+            Promise.all(writePromises),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore receipt_files timeout')), 10000))
           ]);
           return `receipt_files/${recId}`;
         } catch (rErr) {
