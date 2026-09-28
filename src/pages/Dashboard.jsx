@@ -6790,19 +6790,20 @@ const Dashboard = () => {
       setSubPaymentHistory(history);
     }
 
-    // Reset all subscription fields to empty by default (only filled on edit or when user adds new data)
-    setSubReceiptDate('');
-    setSubStartDate('');
-    setSubEndDate('');
-    setSubServiceType('');
-    setSubServiceCategory('');
-    setSubPaymentType('');
-    setSubAgreedPercentage('');
-    setSubPaidAmount('');
-    setSubRemainingAmount('');
-    setSubReceiptProof('');
-    setSubReceiptFileUrl('');
-    setSubNotes('');
+    // Populate subscription fields from latest history record or customer subscriptionDetails
+    const latestRec = history[0] || customer.subscriptionDetails || {};
+    setSubReceiptDate(latestRec.receiptDate || latestRec.date || '');
+    setSubStartDate(latestRec.startDate || customer.subscriptionDetails?.startDate || '');
+    setSubEndDate(latestRec.endDate || customer.subscriptionDetails?.endDate || '');
+    setSubServiceType(latestRec.serviceType || latestRec.packageType || customer.subscriptionDetails?.serviceType || '');
+    setSubServiceCategory(latestRec.serviceCategory || customer.subscriptionDetails?.serviceCategory || '');
+    setSubPaymentType(latestRec.paymentType || customer.subscriptionDetails?.paymentType || '');
+    setSubAgreedPercentage(latestRec.agreedPercentage || customer.subscriptionDetails?.agreedPercentage || '');
+    setSubPaidAmount(latestRec.paidAmount || customer.subscriptionDetails?.paidAmount || '');
+    setSubRemainingAmount(latestRec.remainingAmount || customer.subscriptionDetails?.remainingAmount || '');
+    setSubReceiptProof(latestRec.receiptProof || customer.subscriptionDetails?.receiptProof || '');
+    setSubReceiptFileUrl(latestRec.receiptUrl || customer.subscriptionDetails?.receiptUrl || '');
+    setSubNotes(latestRec.notes || customer.subscriptionDetails?.notes || '');
     setIsAddingNewReceipt(false);
     setEditingReceiptId(null);
     setIsSubscriptionModalOpen(true);
@@ -22707,7 +22708,6 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     </label>
                     <input 
                       type="date"
-                      required
                       data-empty={!subReceiptDate}
                       value={subReceiptDate}
                       onChange={(e) => setSubReceiptDate(e.target.value)}
@@ -22726,7 +22726,6 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       </label>
                       <input 
                         type="date"
-                        required
                         data-empty={!subStartDate}
                         value={subStartDate}
                         onChange={(e) => setSubStartDate(e.target.value)}
@@ -22747,7 +22746,6 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                         </label>
                         <input 
                           type="date"
-                          required
                           data-empty={!subEndDate}
                           value={subEndDate}
                           onChange={(e) => setSubEndDate(e.target.value)}
@@ -22769,7 +22767,6 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     </label>
                     <input 
                       type="text"
-                      required
                       placeholder="المبلغ بالريال *"
                       value={subPaidAmount}
                       onChange={(e) => setSubPaidAmount(e.target.value)}
@@ -22785,7 +22782,6 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                       </label>
                       <input 
                         type="text"
-                        required
                         placeholder="المبلغ المتبقي بالريال *"
                         value={subRemainingAmount}
                         onChange={(e) => setSubRemainingAmount(e.target.value)}
