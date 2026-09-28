@@ -16,12 +16,17 @@ import logoImg from '../assets/logo.jpg';
 export default function Home({ onOpenRegister }) {
 
   const handleOpenWhatsApp = () => {
-    const phone = localStorage.getItem('visitorPhone') || '';
-    if (!phone) {
-      window.location.href = '/visitor-login';
-      return;
+    const floatingBtn = document.getElementById('whatsapp-floating-trigger-btn');
+    if (floatingBtn) {
+      floatingBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      floatingBtn.classList.add('ring-4', 'ring-cyan-400', 'scale-110');
+      setTimeout(() => {
+        floatingBtn.classList.remove('ring-4', 'ring-cyan-400', 'scale-110');
+      }, 1500);
+      floatingBtn.click();
+    } else {
+      window.dispatchEvent(new Event('open_whatsapp_widget'));
     }
-    window.dispatchEvent(new Event('open_whatsapp_widget'));
   };
 
   return (
