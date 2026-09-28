@@ -305,7 +305,11 @@ export default function LandingPage() {
       localStorage.setItem('empTitle', title);
       localStorage.setItem('empCode', matchedEmp.empCode || (isAdminUser ? 'ADMIN' : ''));
       localStorage.setItem('visitorName', alias);
-      localStorage.setItem('visitorPhone', matchedEmp.phoneNumber || matchedEmp.phone || '0000000000');
+      if (matchedEmp.phoneNumber || matchedEmp.phone) {
+        localStorage.setItem('visitorPhone', matchedEmp.phoneNumber || matchedEmp.phone);
+      } else {
+        localStorage.removeItem('visitorPhone');
+      }
 
       setStep(3);
       setTimeout(() => {
