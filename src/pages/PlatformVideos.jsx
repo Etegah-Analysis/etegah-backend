@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Play, Award, Sparkles, Video, ArrowLeft, FileText, Download, Calendar, Clock, ExternalLink, ShieldCheck, Trash2 } from 'lucide-react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { db, collection, onSnapshot, deleteDoc, doc } from '../firebase';
+import { db, collection, onSnapshot, deleteDoc, doc, auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
 
 export default function PlatformVideos() {
@@ -9,7 +10,32 @@ export default function PlatformVideos() {
   const [videoList, setVideoList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPdfReport, setSelectedPdfReport] = useState(null);
-  const isEmp = localStorage.getItem('isEmpLoggedIn') === 'true' || localStorage.getItem('visitorName')?.includes('Admin') || localStorage.getItem('visitorName')?.includes('إدارة');
+  const [currentUser, setCurrentUser] = useState(() => auth?.currentUser || null);
+
+  useEffect(() => {
+    if (!auth) return;
+    const unsub = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+    return () => unsub();
+  }, []);
+
+  const userEmail = (currentUser?.email || auth?.currentUser?.email || '').toLowerCase();
+  const empCode = (localStorage.getItem('empCode') || '').toUpperCase();
+  const empRole = (localStorage.getItem('empRole') || localStorage.getItem('userRole') || '').toLowerCase();
+  const empTitle = localStorage.getItem('empTitle') || '';
+  const visitorName = localStorage.getItem('visitorName') || '';
+
+  const isAdmin = 
+    userEmail === 'etegahanalysis@gmail.com' ||
+    userEmail === 'admin@etegah.com' ||
+    userEmail === 'mohamed.gamal.work0@gmail.com' ||
+    empCode === 'ADMIN' ||
+    empRole === 'admin' ||
+    visitorName.includes('Admin') ||
+    visitorName.includes('إدارة') ||
+    empTitle.includes('إدارة') ||
+    empTitle.includes('Admin');
+
+  const isEmp = localStorage.getItem('isEmpLoggedIn') === 'true' || visitorName.includes('Admin') || visitorName.includes('إدارة');
 
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -208,7 +234,7 @@ export default function PlatformVideos() {
                   <div className="text-xs font-mono font-bold text-emerald-300 pr-5 dir-rtl">
                     {reports.saudi?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير جديد بعد')}
                   </div>
-                  {reports.saudi?.uploadedBy && (
+                  {isAdmin && reports.saudi?.uploadedBy && (
                     <div className="text-[10px] text-slate-400 pr-5">
                       تم الرفع بواسطة: <span className="text-emerald-200 font-semibold">{reports.saudi.uploadedBy}</span>
                     </div>
@@ -273,7 +299,7 @@ export default function PlatformVideos() {
                   <div className="text-xs font-mono font-bold text-blue-300 pr-5 dir-rtl">
                     {reports.us?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير جديد بعد')}
                   </div>
-                  {reports.us?.uploadedBy && (
+                  {isAdmin && reports.us?.uploadedBy && (
                     <div className="text-[10px] text-slate-400 pr-5">
                       تم الرفع بواسطة: <span className="text-blue-200 font-semibold">{reports.us.uploadedBy}</span>
                     </div>
@@ -361,7 +387,7 @@ export default function PlatformVideos() {
                   <div className="text-xs font-mono font-bold text-emerald-300 pr-5 dir-rtl">
                     {reports.saudi_open?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير افتتاح بعد')}
                   </div>
-                  {reports.saudi_open?.uploadedBy && (
+                  {isAdmin && reports.saudi_open?.uploadedBy && (
                     <div className="text-[10px] text-slate-400 pr-5">
                       تم الرفع بواسطة: <span className="text-emerald-200 font-semibold">{reports.saudi_open.uploadedBy}</span>
                     </div>
@@ -424,7 +450,7 @@ export default function PlatformVideos() {
                   <div className="text-xs font-mono font-bold text-teal-300 pr-5 dir-rtl">
                     {reports.saudi_close?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير إغلاق بعد')}
                   </div>
-                  {reports.saudi_close?.uploadedBy && (
+                  {isAdmin && reports.saudi_close?.uploadedBy && (
                     <div className="text-[10px] text-slate-400 pr-5">
                       تم الرفع بواسطة: <span className="text-teal-200 font-semibold">{reports.saudi_close.uploadedBy}</span>
                     </div>
@@ -487,7 +513,7 @@ export default function PlatformVideos() {
                   <div className="text-xs font-mono font-bold text-blue-300 pr-5 dir-rtl">
                     {reports.us_open?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير افتتاح بعد')}
                   </div>
-                  {reports.us_open?.uploadedBy && (
+                  {isAdmin && reports.us_open?.uploadedBy && (
                     <div className="text-[10px] text-slate-400 pr-5">
                       تم الرفع بواسطة: <span className="text-blue-200 font-semibold">{reports.us_open.uploadedBy}</span>
                     </div>
@@ -550,7 +576,7 @@ export default function PlatformVideos() {
                   <div className="text-xs font-mono font-bold text-cyan-300 pr-5 dir-rtl">
                     {reports.us_close?.uploadedAtFormatted || (loading ? 'جاري التحميل...' : 'لم يتم رفع تقرير إغلاق بعد')}
                   </div>
-                  {reports.us_close?.uploadedBy && (
+                  {isAdmin && reports.us_close?.uploadedBy && (
                     <div className="text-[10px] text-slate-400 pr-5">
                       تم الرفع بواسطة: <span className="text-cyan-200 font-semibold">{reports.us_close.uploadedBy}</span>
                     </div>
@@ -644,15 +670,17 @@ export default function PlatformVideos() {
                   <div className="pt-3 border-t border-cyan-500/20 text-[10px] text-slate-400 flex justify-between items-center">
                     <span>تاريخ النشر: {video.uploadedAtFormatted || 'مؤخراً'}</span>
                     <div className="flex items-center gap-2">
-                      {video.uploadedBy && <span className="text-cyan-300 font-semibold">{video.uploadedBy}</span>}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteVideo(video.id, video.title)}
-                        className="p-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 transition cursor-pointer"
-                        title="حذف الفيديو فوراً من الموقع"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      {isAdmin && video.uploadedBy && <span className="text-cyan-300 font-semibold">{video.uploadedBy}</span>}
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteVideo(video.id, video.title)}
+                          className="p-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 transition cursor-pointer"
+                          title="حذف الفيديو فوراً من الموقع"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -686,7 +714,7 @@ export default function PlatformVideos() {
                   </h3>
                   {selectedPdfReport.uploadedAtFormatted && (
                     <p className="text-xs text-cyan-300 font-mono mt-0.5">
-                      📅 {selectedPdfReport.uploadedAtFormatted} {selectedPdfReport.uploadedBy ? `• بواسطة ${selectedPdfReport.uploadedBy}` : ''}
+                      📅 {selectedPdfReport.uploadedAtFormatted} {isAdmin && selectedPdfReport.uploadedBy ? `• بواسطة ${selectedPdfReport.uploadedBy}` : ''}
                     </p>
                   )}
                 </div>

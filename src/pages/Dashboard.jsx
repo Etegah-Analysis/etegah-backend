@@ -25242,7 +25242,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                     {hasPublishedReport && (
                       <div className="text-[11px] text-slate-300 mt-1 space-y-0.5 font-mono">
                         <div>📅 تاريخ ووقت الرفع: <span className="text-emerald-300 font-bold">{publishedReport.uploadedAtFormatted}</span></div>
-                        {publishedReport.uploadedBy && <div>👤 تم الرفع بواسطة: <span className="text-white font-bold">{publishedReport.uploadedBy}</span></div>}
+                        {isAdmin && publishedReport.uploadedBy && <div>👤 تم الرفع بواسطة: <span className="text-white font-bold">{publishedReport.uploadedBy}</span></div>}
                       </div>
                     )}
                   </div>
