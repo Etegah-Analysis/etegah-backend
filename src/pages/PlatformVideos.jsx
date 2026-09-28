@@ -14,9 +14,17 @@ export default function PlatformVideos() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const targetMarketKey = location.state?.autoOpenMarket || searchParams.get('market');
+  const hasAutoOpenedRef = React.useRef(false);
+
+  const handleCloseModal = () => {
+    setSelectedPdfReport(null);
+    if (window.history.replaceState && window.location.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
 
   useEffect(() => {
-    if (!targetMarketKey || loading) return;
+    if (!targetMarketKey || loading || hasAutoOpenedRef.current) return;
 
     const REPORT_TITLES_MAP = {
       saudi: 'التقرير الأسبوعي للسوق السعودي 🇸🇦',
@@ -29,12 +37,17 @@ export default function PlatformVideos() {
 
     const reportObj = reports[targetMarketKey];
     if (reportObj && reportObj.pdfUrl) {
+      hasAutoOpenedRef.current = true;
       setSelectedPdfReport({
         title: REPORT_TITLES_MAP[targetMarketKey] || reportObj.title || 'التقرير المعتمد 📄',
         pdfUrl: reportObj.pdfUrl,
         uploadedAtFormatted: reportObj.uploadedAtFormatted,
         uploadedBy: reportObj.uploadedBy
       });
+
+      if (window.history.replaceState && window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
 
       setTimeout(() => {
         const targetElement = document.getElementById(`card-${targetMarketKey}`);
@@ -43,7 +56,7 @@ export default function PlatformVideos() {
         }
       }, 300);
     }
-  }, [reports, loading, targetMarketKey, location.key, location.search, location.state]);
+  }, [reports, loading, targetMarketKey]);
 
   useEffect(() => {
     document.title = 'تقارير رؤية الافتتاح والإغلاق وتقرير نتائج المنصة السابقة - اتجاه للتحليل الذكي';
@@ -653,7 +666,7 @@ export default function PlatformVideos() {
       {/* PDF Viewer & Preview Modal */}
       {selectedPdfReport && (
         <div 
-          onClick={() => setSelectedPdfReport(null)}
+          onClick={handleCloseModal}
           className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
         >
           <div 
@@ -702,7 +715,7 @@ export default function PlatformVideos() {
                 </a>
                 <button
                   type="button"
-                  onClick={() => setSelectedPdfReport(null)}
+                  onClick={handleCloseModal}
                   className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/40 text-xs px-3 py-1.5 rounded-xl font-bold transition cursor-pointer"
                 >
                   إغلاق ✕
