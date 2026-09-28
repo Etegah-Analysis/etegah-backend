@@ -6618,12 +6618,69 @@ const Dashboard = () => {
   const isPdfUrl = (url) => {
     if (!url || typeof url !== 'string') return false;
     const lower = url.toLowerCase();
-    return lower.startsWith('data:application/pdf') || 
-           lower.startsWith('data:application/x-pdf') || 
-           lower.includes('.pdf') || 
-           lower.includes('pdf') ||
-           lower.startsWith('receipt_files/');
+    if (lower.startsWith('data:application/pdf') || lower.startsWith('data:application/x-pdf')) return true;
+    if (lower.startsWith('data:image/')) return false;
+    if (/\.pdf(\?|$)/i.test(lower)) return true;
+    return false;
   };
+
+  const resolveReceiptUrl = async (url) => {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('receipt_files/')) {
+      const recId = trimmed.replace('receipt_files/', '').trim();
+      if (recId) {
+        try {
+          const docSnap = await getDoc(doc(db, 'receipt_files', recId));
+          if (docSnap.exists() && docSnap.data()?.dataUrl) {
+            return docSnap.data().dataUrl;
+          }
+        } catch (err) {
+          console.error('Error fetching receipt_files document:', err);
+        }
+      }
+    }
+    return trimmed;
+  };
+
+  const handleOpenReceiptPreview = async (rawUrl, title = '') => {
+    if (!rawUrl) return;
+    const itemUrl = typeof rawUrl === 'string' ? rawUrl : rawUrl?.url;
+    const itemTitle = title || (typeof rawUrl === 'object' ? rawUrl?.title : '');
+    if (itemUrl && typeof itemUrl === 'string' && itemUrl.startsWith('receipt_files/')) {
+      const toastId = toast.loading('جاري تحميل ملف الإشعار... ⏳');
+      try {
+        const resolved = await resolveReceiptUrl(itemUrl);
+        toast.dismiss(toastId);
+        if (resolved) {
+          setLightboxImage({ url: resolved, title: itemTitle });
+        } else {
+          toast.error('عذراً، لم يتم العثور على الإشعار المرفق ⚠️');
+        }
+      } catch (err) {
+        toast.dismiss(toastId);
+        toast.error('حدث خطأ أثناء فتح الإشعار ⚠️');
+      }
+    } else {
+      setLightboxImage({ url: itemUrl, title: itemTitle });
+    }
+  };
+
+  useEffect(() => {
+    if (lightboxImage) {
+      const rawUrl = typeof lightboxImage === 'string' ? lightboxImage : lightboxImage?.url;
+      if (rawUrl && typeof rawUrl === 'string' && rawUrl.startsWith('receipt_files/')) {
+        resolveReceiptUrl(rawUrl).then(resolved => {
+          if (resolved && resolved !== rawUrl) {
+            setLightboxImage(prev => {
+              if (!prev) return null;
+              return typeof prev === 'string' ? resolved : { ...prev, url: resolved };
+            });
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [lightboxImage]);
 
   const saveReceiptFile = async (fileOrDataUrl, filenamePrefix = 'rcpt') => {
     if (!fileOrDataUrl) return '';
@@ -6899,7 +6956,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleStartEditPaymentRecord = (item) => {
+  const handleStartEditPaymentRecord = async (item) => {
     setEditingReceiptId(item.id);
     setSubReceiptDate(item.receiptDate || item.date || '');
     setSubServiceType(item.serviceType || item.packageType || 'باقة سنوية');
@@ -6911,7 +6968,12 @@ const Dashboard = () => {
     setSubPaidAmount(item.paidAmount ? String(item.paidAmount).replace(/[^0-9.]/g, '') : '');
     setSubRemainingAmount(item.remainingAmount ? String(item.remainingAmount).replace(/[^0-9.]/g, '') : '');
     setSubReceiptProof(item.receiptProof || '');
-    setSubReceiptFileUrl(item.receiptUrl || '');
+    
+    let resolvedUrl = item.receiptUrl || '';
+    if (resolvedUrl.startsWith('receipt_files/')) {
+      resolvedUrl = await resolveReceiptUrl(resolvedUrl);
+    }
+    setSubReceiptFileUrl(resolvedUrl);
     setSubNotes(item.notes || '');
 
     setTimeout(() => {
@@ -18992,7 +19054,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                 src={item.receiptUrl} 
                                 alt="Receipt" 
                                 className="w-11 h-11 object-cover rounded-xl border-2 border-rose-300 cursor-pointer hover:scale-105 transition shadow-sm bg-black"
-                                onClick={() => setLightboxImage({ url: item.receiptUrl, title: `إشعار محذوف: ${item.customerName || item.name || 'عميل'}` })}
+                                onClick={() => handleOpenReceiptPreview(item.receiptUrl, `إشعار محذوف: ${item.customerName || item.name || 'عميل'}`)}
                               />
                             ) : (
                               <div className="w-11 h-11 rounded-xl bg-gray-100 border border-gray-300 flex items-center justify-center text-xs text-gray-500">
@@ -22201,7 +22263,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                           {isPdfUrl(subReceiptFileUrl) ? (
                             <div 
                               className="w-12 h-12 rounded-lg bg-rose-950/80 border border-rose-500/50 flex flex-col items-center justify-center text-rose-300 font-mono text-xs font-bold shrink-0 cursor-pointer hover:bg-rose-900 transition shadow-sm"
-                              onClick={() => setLightboxImage({ url: subReceiptFileUrl, title: 'معاينة ملف PDF الإشعار' })}
+                              onClick={() => handleOpenReceiptPreview(subReceiptFileUrl, 'معاينة ملف PDF الإشعار')}
                               title="انقر لمعاينة ملف PDF"
                             >
                               <span className="text-[10px]">PDF</span>
@@ -22212,7 +22274,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                               src={subReceiptFileUrl} 
                               alt="Receipt preview" 
                               className="w-12 h-12 object-cover rounded-lg border-2 border-emerald-400/80 cursor-pointer hover:scale-105 transition shrink-0 bg-black"
-                              onClick={() => setLightboxImage({ url: subReceiptFileUrl, title: 'معاينة إشعار التحويل' })}
+                              onClick={() => handleOpenReceiptPreview(subReceiptFileUrl, 'معاينة إشعار التحويل')}
                             />
                           )}
                           <div className="min-w-0">
@@ -22360,7 +22422,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                 <div className="shrink-0 group relative">
                                   {isPdfUrl(item.receiptUrl) ? (
                                     <div 
-                                      onClick={() => setLightboxImage({ url: item.receiptUrl, title: `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}` })}
+                                      onClick={() => handleOpenReceiptPreview(item.receiptUrl, `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}`)}
                                       className="w-16 h-16 rounded-xl bg-rose-950/90 border-2 border-rose-500/60 flex flex-col items-center justify-center text-rose-300 cursor-pointer group-hover:scale-105 transition shrink-0 shadow-md hover:bg-rose-900"
                                       title="انقر لمعاينة ملف الـ PDF"
                                     >
@@ -22372,13 +22434,13 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                                       src={item.receiptUrl} 
                                       alt="Receipt" 
                                       className="w-16 h-16 object-cover rounded-xl border-2 border-emerald-400/60 cursor-pointer group-hover:scale-105 transition shrink-0 bg-slate-950 shadow-md"
-                                      onClick={() => setLightboxImage({ url: item.receiptUrl, title: `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}` })}
+                                      onClick={() => handleOpenReceiptPreview(item.receiptUrl, `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}`)}
                                       title="انقر لتكبير الإشعار"
                                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     />
                                   )}
                                   <div 
-                                    onClick={() => setLightboxImage({ url: item.receiptUrl, title: `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}` })}
+                                    onClick={() => handleOpenReceiptPreview(item.receiptUrl, `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}`)}
                                     className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center text-white transition cursor-pointer text-[10px] font-bold"
                                   >
                                     🔍 معاينة
@@ -22449,7 +22511,7 @@ ${(item.lastEditedBy || item.isEdited || String(item.uploadedDateTime || '').inc
                               {item.receiptUrl && (
                                 <button
                                   type="button"
-                                  onClick={() => setLightboxImage({ url: item.receiptUrl, title: `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}` })}
+                                  onClick={() => handleOpenReceiptPreview(item.receiptUrl, `${selectedSubCustomer?.name || 'العميل'} • ${item.uploadedDateTime || item.date || ''}`)}
                                   className="text-emerald-300 hover:text-white bg-emerald-950/80 hover:bg-emerald-600 border border-emerald-500/40 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 shadow-sm flex items-center gap-1"
                                   title="معاينة وتكبير صورة الإشعار"
                                 >
