@@ -255,9 +255,8 @@ export default function PlatformVideos() {
                     })}
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
-                    <Download size={16} />
-                    <span>📄 عرض / تحميل التقرير (PDF)</span>
-                    <ExternalLink size={14} className="opacity-80" />
+                    <FileText size={16} />
+                    <span>عرض التقرير</span>
                   </button>
                 ) : (
                   <button
@@ -320,9 +319,8 @@ export default function PlatformVideos() {
                     })}
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
-                    <Download size={16} />
-                    <span>📄 عرض / تحميل التقرير (PDF)</span>
-                    <ExternalLink size={14} className="opacity-80" />
+                    <FileText size={16} />
+                    <span>عرض التقرير</span>
                   </button>
                 ) : (
                   <button
@@ -407,9 +405,8 @@ export default function PlatformVideos() {
                     })}
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
-                    <Download size={16} />
-                    <span>📄 / 🖼️ عرض التقرير (صورة / PDF)</span>
-                    <ExternalLink size={14} className="opacity-80" />
+                    <FileText size={16} />
+                    <span>عرض التقرير</span>
                   </button>
                 ) : (
                   <button
@@ -470,9 +467,8 @@ export default function PlatformVideos() {
                     })}
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
-                    <Download size={16} />
-                    <span>📄 / 🖼️ عرض التقرير (صورة / PDF)</span>
-                    <ExternalLink size={14} className="opacity-80" />
+                    <FileText size={16} />
+                    <span>عرض التقرير</span>
                   </button>
                 ) : (
                   <button
@@ -533,9 +529,8 @@ export default function PlatformVideos() {
                     })}
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
-                    <Download size={16} />
-                    <span>📄 / 🖼️ عرض التقرير (صورة / PDF)</span>
-                    <ExternalLink size={14} className="opacity-80" />
+                    <FileText size={16} />
+                    <span>عرض التقرير</span>
                   </button>
                 ) : (
                   <button
@@ -596,9 +591,8 @@ export default function PlatformVideos() {
                     })}
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-extrabold text-xs shadow-lg transition transform group-hover:scale-[1.02] cursor-pointer"
                   >
-                    <Download size={16} />
-                    <span>📄 / 🖼️ عرض التقرير (صورة / PDF)</span>
-                    <ExternalLink size={14} className="opacity-80" />
+                    <FileText size={16} />
+                    <span>عرض التقرير</span>
                   </button>
                 ) : (
                   <button
