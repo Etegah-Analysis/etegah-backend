@@ -722,29 +722,10 @@ export default function PlatformVideos() {
 
               {/* Action Tools */}
               <div className="flex items-center gap-2">
-                <a
-                  href={selectedPdfReport.pdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-cyan-900/80 hover:bg-cyan-800 text-cyan-200 border border-cyan-400/40 text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow"
-                >
-                  <ExternalLink size={14} />
-                  <span>فتح بتبويب جديد ↗️</span>
-                </a>
-                <a
-                  href={selectedPdfReport.pdfUrl}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 shadow"
-                >
-                  <Download size={14} />
-                  <span>تحميل PDF 📥</span>
-                </a>
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/40 text-xs px-3 py-1.5 rounded-xl font-bold transition cursor-pointer"
+                  className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/40 text-xs px-3.5 py-1.5 rounded-xl font-bold transition cursor-pointer"
                 >
                   إغلاق ✕
                 </button>
