@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogOut, Bell, ShieldCheck, Trash2 } from 'lucide-react';
+import { Menu, X, User, LogOut, Bell, ShieldCheck, Trash2, MessageCircle } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { collection, query, where, onSnapshot, doc, getDocs, getDoc, setDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
@@ -496,6 +496,15 @@ export default function Navbar() {
     setIsMobileMenuOpen(false);
   };
 
+  const handleProtectedLinkClick = (e, path) => {
+    setIsMobileMenuOpen(false);
+    if (!isLoggedIn) {
+      e.preventDefault();
+      toast.error('يرجى تسجيل الدخول أولاً للوصول إلى هذا المحتوى 🔐');
+      navigate('/visitor-login');
+    }
+  };
+
   // User login status check
   const isLoggedIn = isEmp || Boolean(visitorName) || Boolean(visitorPhone);
   const displayName = isEmp ? (empAliasName || visitorName || 'موظف اتجاه') : (visitorName || 'عميل اتجاه');
@@ -514,21 +523,31 @@ export default function Navbar() {
           <Link to="/" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
             الرئيسية
           </Link>
-          <Link to="/platform-videos" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+          <Link to="/platform-videos" className="nav-link" onClick={(e) => handleProtectedLinkClick(e, '/platform-videos')}>
             تقارير رؤية الافتتاح والإغلاق وتقرير نتائج المنصة السابقة
           </Link>
-          <Link to="/news" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+          <Link to="/news" className="nav-link" onClick={(e) => handleProtectedLinkClick(e, '/news')}>
             أخبار السوق السعودي
           </Link>
-          <Link to="/us-options" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
+          <Link to="/us-options" className="nav-link" onClick={(e) => handleProtectedLinkClick(e, '/us-options')}>
             أخبار السوق الأمريكي
           </Link>
         </div>
 
-        {/* Top bar left section (RTL): Bell + User/Emp badge + Single Left Logout + Hamburger Menu */}
+        {/* Top bar left section (RTL): Bell + User/Emp badge + Contact Us + Logout */}
         <div className="mobile-controls flex items-center gap-2">
           {isLoggedIn && (
             <div className="flex items-center gap-2">
+              {/* Header Contact Us WhatsApp Button */}
+              <button
+                onClick={handleOpenChat}
+                className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold transition flex items-center gap-1.5 shadow-md text-xs cursor-pointer active:scale-95 shrink-0 border border-emerald-400/40"
+                title="تواصل معنا عبر الواتساب"
+              >
+                <MessageCircle size={14} className="animate-bounce text-emerald-200" />
+                <span className="hidden sm:inline">تواصل معنا</span>
+              </button>
+
               {/* ALWAYS VISIBLE Single Notification Bell Button */}
               <div className="relative" ref={notifRef}>
                 <button

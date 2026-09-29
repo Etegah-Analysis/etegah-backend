@@ -17,10 +17,15 @@ export default function WhatsAppWidget() {
   const isAdmin = 
     empCode === 'ADMIN' ||
     empRole === 'admin' ||
+    empRole === 'customer_service' ||
+    empRole === 'coordinator' ||
     visitorName.includes('Admin') ||
     visitorName.includes('إدارة') ||
     empTitle.includes('إدارة') ||
-    empTitle.includes('Admin');
+    empTitle.includes('Admin') ||
+    empTitle.includes('خدمة') ||
+    empTitle.includes('منسق') ||
+    empTitle.includes('customer_service');
 
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
