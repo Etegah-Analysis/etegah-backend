@@ -1303,24 +1303,6 @@ export default function WhatsAppWidget() {
                   <p className="text-xs text-gray-300 leading-relaxed">
                     عذراً، الواتساب المباشر بالموقع مخصص لتواصل واستفسارات العملاء والزوار فقط.
                   </p>
-                  <p className="text-xs text-amber-300 font-semibold leading-relaxed">
-                    بصفتك موظف/مستشار معتمد، يمكنك متابعة وتصفح محادثات ورسائل العملاء من خلال لوحة التحكم.
-                  </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2.5 w-full max-w-xs pt-3">
-                  <button
-                    onClick={() => { setIsOpen(false); window.location.href = '/dashboard'; }}
-                    className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-lg transition cursor-pointer"
-                  >
-                    لوحة التحكم 📊
-                  </button>
-                  <button
-                    onClick={() => { setIsOpen(false); window.location.href = '/inbox'; }}
-                    className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-lg transition cursor-pointer"
-                  >
-                    الرسائل 💬
-                  </button>
                 </div>
               </div>
             ) : (
