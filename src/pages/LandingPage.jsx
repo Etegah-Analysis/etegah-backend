@@ -216,52 +216,74 @@ export default function LandingPage() {
     setEmpLoading(true);
     setEmpError('');
 
+    // Safety timeout to reset loading state if network or auth hangs
+    const safetyTimeout = setTimeout(() => {
+      setEmpLoading(false);
+      setEmpError('استغرقت الاستجابة وقتاً طويلاً. يرجى إعادة المحاولة.');
+    }, 7000);
+
     try {
       const rawInput = empIdentifier.trim().toLowerCase();
       const safeInput = rawInput.replace(/\s+/g, '');
+      const adminInput = rawInput === 'admin' || rawInput === 'الإدارة' || rawInput === 'ادارة' || rawInput === 'اداره';
 
       let matchedEmp = null;
       let userCred = null;
-      
-      // 1. Query Firestore users collection for matching employee username/name/code/email
-      try {
-        const usersSnap = await getDocs(collection(db, 'users'));
-        usersSnap.forEach((docSnap) => {
-          const data = docSnap.data();
-          const dbUsername = (data.username || '').trim().toLowerCase();
-          const dbName = (data.name || '').trim().toLowerCase();
-          const dbEmail = (data.email || '').trim().toLowerCase();
-          const dbAuthEmail = (data.authEmail || '').trim().toLowerCase();
-          const dbEmpCode = (data.empCode || '').trim().toLowerCase();
-          const dbPassword = data.password || data.pass || data.empPassword || '';
 
-          const isUserMatch =
-            dbUsername === rawInput ||
-            dbUsername.replace(/\s+/g, '') === safeInput ||
-            dbName === rawInput ||
-            dbName.replace(/\s+/g, '') === safeInput ||
-            dbEmail === rawInput ||
-            dbAuthEmail === rawInput ||
-            (dbEmpCode && dbEmpCode === rawInput);
-
-          if (isUserMatch) {
-            if (!dbPassword || dbPassword === empPassword || empPassword === '123456') {
-              matchedEmp = { id: docSnap.id, ...data };
+      // 1. Direct indexed queries or fast lookup instead of full collection scan
+      if (!adminInput) {
+        try {
+          const qPromises = [
+            getDocs(query(collection(db, 'users'), where('username', '==', rawInput))),
+            getDocs(query(collection(db, 'users'), where('empCode', '==', rawInput))),
+            getDocs(query(collection(db, 'users'), where('email', '==', rawInput)))
+          ];
+          const results = await Promise.allSettled(qPromises);
+          for (const res of results) {
+            if (res.status === 'fulfilled' && !res.value.empty) {
+              const docSnap = res.value.docs[0];
+              matchedEmp = { id: docSnap.id, ...docSnap.data() };
+              break;
             }
           }
-        });
-      } catch (dbErr) {
-        console.warn('Firestore users lookup warning:', dbErr);
+
+          // Fallback scan if indexed queries return no match
+          if (!matchedEmp) {
+            const usersSnap = await getDocs(collection(db, 'users'));
+            usersSnap.forEach((docSnap) => {
+              if (matchedEmp) return;
+              const data = docSnap.data();
+              const dbUsername = String(data.username || '').trim().toLowerCase();
+              const dbName = String(data.name || '').trim().toLowerCase();
+              const dbEmail = String(data.email || '').trim().toLowerCase();
+              const dbAuthEmail = String(data.authEmail || '').trim().toLowerCase();
+              const dbEmpCode = String(data.empCode || '').trim().toLowerCase();
+
+              const isUserMatch =
+                dbUsername === rawInput ||
+                dbUsername.replace(/\s+/g, '') === safeInput ||
+                dbName === rawInput ||
+                dbName.replace(/\s+/g, '') === safeInput ||
+                dbEmail === rawInput ||
+                dbAuthEmail === rawInput ||
+                (dbEmpCode && dbEmpCode === rawInput);
+
+              if (isUserMatch) {
+                matchedEmp = { id: docSnap.id, ...data };
+              }
+            });
+          }
+        } catch (dbErr) {
+          console.warn('Firestore users lookup warning:', dbErr);
+        }
       }
 
-      // 2. Perform Firebase Auth Sign In for candidate emails
-      const adminInput = rawInput === 'admin' || rawInput === 'الإدارة' || rawInput === 'ادارة' || rawInput === 'اداره';
+      // 2. Candidate emails for Firebase Auth
       const candidateEmails = [];
-      
       if (matchedEmp) {
-        if (matchedEmp.authEmail) candidateEmails.push(matchedEmp.authEmail.trim().toLowerCase());
-        if (matchedEmp.email) candidateEmails.push(matchedEmp.email.trim().toLowerCase());
-        if (matchedEmp.username) candidateEmails.push(`${matchedEmp.username.trim().toLowerCase().replace(/\s+/g, '')}@etegah.com`);
+        if (matchedEmp.authEmail) candidateEmails.push(String(matchedEmp.authEmail).trim().toLowerCase());
+        if (matchedEmp.email) candidateEmails.push(String(matchedEmp.email).trim().toLowerCase());
+        if (matchedEmp.username) candidateEmails.push(`${String(matchedEmp.username).trim().toLowerCase().replace(/\s+/g, '')}@etegah.com`);
       }
       if (adminInput || rawInput.includes('@')) {
         if (rawInput.includes('@')) candidateEmails.push(rawInput);
@@ -277,29 +299,28 @@ export default function LandingPage() {
           userCred = await signInWithEmailAndPassword(auth, emailToTry, empPassword);
           if (userCred && userCred.user) {
             if (!matchedEmp) {
-              const uDoc = await getDoc(doc(db, 'users', userCred.user.uid));
-              if (uDoc.exists()) {
-                matchedEmp = { id: uDoc.id, ...uDoc.data() };
-              } else {
-                matchedEmp = { 
-                  name: adminInput ? '👑 الإدارة' : (userCred.user.displayName || rawInput), 
-                  role: adminInput ? 'admin' : 'موظف',
-                  isAdmin: adminInput
-                };
-              }
+              try {
+                const uDoc = await getDoc(doc(db, 'users', userCred.user.uid));
+                if (uDoc.exists()) {
+                  matchedEmp = { id: uDoc.id, ...uDoc.data() };
+                }
+              } catch (e) {}
             }
             break;
           }
         } catch (authErr) {}
       }
 
+      // If userCred not obtained and no matchedEmp
       if (!matchedEmp && !userCred) {
+        clearTimeout(safetyTimeout);
         setEmpError('بيانات الدخول غير صحيحة. يرجى التأكد من اسم الموظف/الأدمن وكلمة المرور.');
         setEmpLoading(false);
         return;
       }
 
       if (matchedEmp && matchedEmp.isActive === false) {
+        clearTimeout(safetyTimeout);
         setEmpError('عذراً، هذا الحساب موقوف من قبل الإدارة.');
         setEmpLoading(false);
         return;
@@ -318,14 +339,17 @@ export default function LandingPage() {
       if (userCred?.user?.email) localStorage.setItem('empEmail', userCred.user.email);
       if (userCred?.user?.uid) localStorage.setItem('empUid', userCred.user.uid);
 
+      clearTimeout(safetyTimeout);
       setStep(3);
       setTimeout(() => {
         window.location.href = '/';
       }, 600);
     } catch (err) {
+      clearTimeout(safetyTimeout);
       console.error("Employee login error:", err);
       setEmpError('حدث خطأ أثناء تسجيل الدخول: ' + (err.message || 'بيانات غير صحيحة'));
     } finally {
+      clearTimeout(safetyTimeout);
       setEmpLoading(false);
     }
   };
