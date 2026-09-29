@@ -333,7 +333,7 @@ export default function LandingPage() {
       localStorage.setItem('isEmpLoggedIn', 'true');
       localStorage.setItem('empAliasName', alias);
       localStorage.setItem('empTitle', title);
-      localStorage.setItem('empCode', matchedEmp?.empCode || (isAdminUser ? 'ADMIN' : ''));
+      localStorage.setItem('empCode', matchedEmp?.empCode || (isAdminUser ? 'ADMIN' : (matchedEmp?.id || 'EMP')));
       localStorage.setItem('visitorName', alias);
       localStorage.removeItem('visitorPhone');
       if (userCred?.user?.email) localStorage.setItem('empEmail', userCred.user.email);

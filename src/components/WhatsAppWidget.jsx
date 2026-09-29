@@ -242,6 +242,7 @@ export default function WhatsAppWidget() {
   useEffect(() => {
     if (!userPhone) return;
     const cleanPhone = userPhone.replace(/[^0-9]/g, '');
+    if (!cleanPhone) return;
     const callDocRef = doc(db, 'internal_calls', cleanPhone);
 
     const unsub = onSnapshot(callDocRef, (docSnap) => {
@@ -604,6 +605,7 @@ export default function WhatsAppWidget() {
   useEffect(() => {
     if (!userPhone) return;
     const cleanPhone = userPhone.replace(/[^0-9]/g, '');
+    if (!cleanPhone) return;
     const chatId = `chat_${cleanPhone}`;
 
     // 1. Check local storage for instant state restoration
