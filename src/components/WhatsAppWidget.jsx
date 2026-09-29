@@ -371,7 +371,8 @@ export default function WhatsAppWidget() {
   useEffect(() => {
     const handleOpenWidget = () => {
       const phone = localStorage.getItem('visitorPhone') || '';
-      if (!phone) {
+      const isEmp = localStorage.getItem('isEmpLoggedIn') === 'true';
+      if (!phone && !isEmp) {
         alert('يرجى تسجيل الدخول أولاً بالـ OTP لتأكيد حسابك وبدء التواصل المباشر 🔐');
         window.location.href = '/visitor-login';
         return;
@@ -791,7 +792,7 @@ export default function WhatsAppWidget() {
 
   // Handle open trigger click
   const handleTriggerClick = () => {
-    if (!userPhone) {
+    if (!userPhone && !isEmpLoggedIn) {
       alert('يرجى تسجيل الدخول أولاً بالـ OTP لتأكيد حسابك وبدء التواصل المباشر 🔐');
       window.location.href = '/visitor-login';
       return;
