@@ -319,9 +319,32 @@ export default function Navbar() {
       return true;
     });
 
+    // Get or initialize user first login / join timestamp to suppress old reports from Bell notifications
+    let userJoinedAt = 0;
+    try {
+      const storedJoined = localStorage.getItem(`etegah_joined_time_${userKey}`);
+      if (storedJoined) {
+        userJoinedAt = parseInt(storedJoined, 10) || 0;
+      } else {
+        userJoinedAt = Date.now();
+        localStorage.setItem(`etegah_joined_time_${userKey}`, userJoinedAt.toString());
+      }
+    } catch (e) {
+      userJoinedAt = 0;
+    }
+
     const shouldSuppressCustomerChats = isEmp && !isAdmin;
     const filteredChatMsgs = shouldSuppressCustomerChats ? [] : chatNotifications.filter(m => !allReadMsgIds.includes(m.id));
-    const filteredPlatformMsgs = platformNotifications.filter(m => !cleanReadPlatformIds.includes(m.id));
+
+    const filteredPlatformMsgs = platformNotifications.filter(m => {
+      if (cleanReadPlatformIds.includes(m.id)) return false;
+      const msgTime = m.timestamp?.toMillis ? m.timestamp.toMillis() : (m.timestamp ? new Date(m.timestamp).getTime() : (m.timestampMillis || 0));
+      // Exclude reports published prior to user's first login timestamp (with 1-minute buffer)
+      if (userJoinedAt > 0 && msgTime > 0 && msgTime < (userJoinedAt - 60000)) {
+        return false;
+      }
+      return true;
+    });
 
     const merged = [...filteredChatMsgs, ...filteredPlatformMsgs].sort((a, b) => {
       const tA = a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.timestamp ? new Date(a.timestamp).getTime() : (a.timestampMillis || 0));
