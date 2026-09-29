@@ -221,6 +221,7 @@ export default function LandingPage() {
       const safeInput = rawInput.replace(/\s+/g, '');
 
       let matchedEmp = null;
+      let userCred = null;
       
       // 1. Query Firestore users collection for matching employee username/name/code/email
       try {
@@ -230,6 +231,7 @@ export default function LandingPage() {
           const dbUsername = (data.username || '').trim().toLowerCase();
           const dbName = (data.name || '').trim().toLowerCase();
           const dbEmail = (data.email || '').trim().toLowerCase();
+          const dbAuthEmail = (data.authEmail || '').trim().toLowerCase();
           const dbEmpCode = (data.empCode || '').trim().toLowerCase();
           const dbPassword = data.password || data.pass || data.empPassword || '';
 
@@ -239,6 +241,7 @@ export default function LandingPage() {
             dbName === rawInput ||
             dbName.replace(/\s+/g, '') === safeInput ||
             dbEmail === rawInput ||
+            dbAuthEmail === rawInput ||
             (dbEmpCode && dbEmpCode === rawInput);
 
           if (isUserMatch) {
@@ -251,23 +254,29 @@ export default function LandingPage() {
         console.warn('Firestore users lookup warning:', dbErr);
       }
 
-      // 2. Check Admin candidate emails & Auth
+      // 2. Perform Firebase Auth Sign In for candidate emails
       const adminInput = rawInput === 'admin' || rawInput === 'الإدارة' || rawInput === 'ادارة' || rawInput === 'اداره';
-      if (!matchedEmp) {
-        const candidateEmails = [];
-        if (adminInput || rawInput.includes('@')) {
-          if (rawInput.includes('@')) candidateEmails.push(rawInput);
-          candidateEmails.push('etegahanalysis@gmail.com');
-          candidateEmails.push('mohamed.gamal.work0@gmail.com');
-          candidateEmails.push('admin@etegah.com');
-        } else {
-          candidateEmails.push(`${safeInput}@etegah.com`);
-        }
+      const candidateEmails = [];
+      
+      if (matchedEmp) {
+        if (matchedEmp.authEmail) candidateEmails.push(matchedEmp.authEmail.trim().toLowerCase());
+        if (matchedEmp.email) candidateEmails.push(matchedEmp.email.trim().toLowerCase());
+        if (matchedEmp.username) candidateEmails.push(`${matchedEmp.username.trim().toLowerCase().replace(/\s+/g, '')}@etegah.com`);
+      }
+      if (adminInput || rawInput.includes('@')) {
+        if (rawInput.includes('@')) candidateEmails.push(rawInput);
+        candidateEmails.push('etegahanalysis@gmail.com');
+        candidateEmails.push('mohamed.gamal.work0@gmail.com');
+        candidateEmails.push('admin@etegah.com');
+      } else {
+        candidateEmails.push(`${safeInput}@etegah.com`);
+      }
 
-        for (const emailToTry of candidateEmails) {
-          try {
-            const userCred = await signInWithEmailAndPassword(auth, emailToTry, empPassword);
-            if (userCred && userCred.user) {
+      for (const emailToTry of candidateEmails) {
+        try {
+          userCred = await signInWithEmailAndPassword(auth, emailToTry, empPassword);
+          if (userCred && userCred.user) {
+            if (!matchedEmp) {
               const uDoc = await getDoc(doc(db, 'users', userCred.user.uid));
               if (uDoc.exists()) {
                 matchedEmp = { id: uDoc.id, ...uDoc.data() };
@@ -278,43 +287,41 @@ export default function LandingPage() {
                   isAdmin: adminInput
                 };
               }
-              break;
             }
-          } catch (authErr) {}
-        }
+            break;
+          }
+        } catch (authErr) {}
       }
 
-      if (!matchedEmp) {
+      if (!matchedEmp && !userCred) {
         setEmpError('بيانات الدخول غير صحيحة. يرجى التأكد من اسم الموظف/الأدمن وكلمة المرور.');
         setEmpLoading(false);
         return;
       }
 
-      if (matchedEmp.isActive === false) {
+      if (matchedEmp && matchedEmp.isActive === false) {
         setEmpError('عذراً، هذا الحساب موقوف من قبل الإدارة.');
         setEmpLoading(false);
         return;
       }
 
-      const isAdminUser = adminInput || matchedEmp.role === 'admin' || matchedEmp.isAdmin === true || matchedEmp.email === 'etegahanalysis@gmail.com';
-      const alias = isAdminUser ? '👑 الإدارة' : (matchedEmp.aliasName || matchedEmp.pseudonym || matchedEmp.displayName || matchedEmp.username || matchedEmp.name || empIdentifier);
-      const title = isAdminUser ? 'الأدمن / الإدارة' : (matchedEmp.title || matchedEmp.role || matchedEmp.jobTitle || 'مستشار مالي');
+      const isAdminUser = adminInput || (matchedEmp && (matchedEmp.role === 'admin' || matchedEmp.isAdmin === true || matchedEmp.email === 'etegahanalysis@gmail.com'));
+      const alias = isAdminUser ? '👑 الإدارة' : (matchedEmp?.aliasName || matchedEmp?.pseudonym || matchedEmp?.displayName || matchedEmp?.username || matchedEmp?.name || empIdentifier);
+      const title = isAdminUser ? 'الأدمن / الإدارة' : (matchedEmp?.title || matchedEmp?.role || matchedEmp?.jobTitle || 'مستشار مالي');
 
       localStorage.setItem('isEmpLoggedIn', 'true');
       localStorage.setItem('empAliasName', alias);
       localStorage.setItem('empTitle', title);
-      localStorage.setItem('empCode', matchedEmp.empCode || (isAdminUser ? 'ADMIN' : ''));
+      localStorage.setItem('empCode', matchedEmp?.empCode || (isAdminUser ? 'ADMIN' : ''));
       localStorage.setItem('visitorName', alias);
-      if (matchedEmp.phoneNumber || matchedEmp.phone) {
-        localStorage.setItem('visitorPhone', matchedEmp.phoneNumber || matchedEmp.phone);
-      } else {
-        localStorage.removeItem('visitorPhone');
-      }
+      localStorage.removeItem('visitorPhone');
+      if (userCred?.user?.email) localStorage.setItem('empEmail', userCred.user.email);
+      if (userCred?.user?.uid) localStorage.setItem('empUid', userCred.user.uid);
 
       setStep(3);
       setTimeout(() => {
         window.location.href = '/';
-      }, 1000);
+      }, 600);
     } catch (err) {
       console.error("Employee login error:", err);
       setEmpError('حدث خطأ أثناء تسجيل الدخول: ' + (err.message || 'بيانات غير صحيحة'));

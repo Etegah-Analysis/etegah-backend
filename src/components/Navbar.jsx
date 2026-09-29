@@ -484,6 +484,16 @@ export default function Navbar() {
           <Link to="/" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
             الرئيسية
           </Link>
+          {isEmp && (
+            <>
+              <Link to="/dashboard" className="nav-link text-cyan-300 font-bold" onClick={() => setIsMobileMenuOpen(false)}>
+                لوحة التحكم 📊
+              </Link>
+              <Link to="/inbox" className="nav-link text-emerald-300 font-bold" onClick={() => setIsMobileMenuOpen(false)}>
+                الرسائل 💬
+              </Link>
+            </>
+          )}
           <Link to="/platform-videos" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>
             تقارير رؤية الافتتاح والإغلاق وتقرير نتائج المنصة السابقة
           </Link>
@@ -584,13 +594,17 @@ export default function Navbar() {
 
               {/* User / Employee Badge Button */}
               {isEmp ? (
-                <div className="px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-cyan-400/50 text-cyan-300 font-bold flex items-center gap-1.5 shadow-[0_4px_15px_rgba(6,182,212,0.25)] text-xs sm:text-sm">
+                <Link
+                  to="/dashboard"
+                  className="px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-cyan-400/50 text-cyan-300 hover:text-white hover:border-cyan-300 transition font-bold flex items-center gap-1.5 shadow-[0_4px_15px_rgba(6,182,212,0.25)] text-xs sm:text-sm cursor-pointer"
+                  title="الانتقال إلى لوحة التحكم"
+                >
                   <ShieldCheck size={15} className="text-cyan-400 shrink-0" />
                   <span>👨‍💼 {displayName}</span>
                   <span className="text-[10px] text-cyan-200/80 bg-cyan-950/80 px-1.5 py-0.5 rounded-md border border-cyan-500/30 hidden sm:inline">
                     {empTitle || 'مستشار مالي'}
                   </span>
-                </div>
+                </Link>
               ) : (
                 <button 
                   onClick={handleOpenChat}
