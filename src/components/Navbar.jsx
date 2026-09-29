@@ -228,6 +228,12 @@ export default function Navbar() {
 
   const getUserNotifKey = () => {
     if (auth.currentUser?.uid) return `user_${auth.currentUser.uid}`;
+    const empUid = localStorage.getItem('empUid');
+    if (empUid) return `user_${empUid}`;
+    const empCode = localStorage.getItem('empCode');
+    if (empCode) return `emp_${empCode}`;
+    const empAlias = localStorage.getItem('empAliasName');
+    if (empAlias) return `emp_${empAlias.replace(/\s+/g, '')}`;
     if (visitorPhone) return visitorPhone.replace(/[^0-9]/g, '');
     return isEmp ? 'employee' : 'guest';
   };
@@ -547,8 +553,8 @@ export default function Navbar() {
                 >
                   <Bell size={16} className={unreadCount > 0 ? "text-cyan-300 animate-pulse" : "text-gray-400"} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full bg-rose-500 text-[9px] sm:text-[10px] font-black text-white shadow-md animate-bounce">
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                    <span className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 min-w-[16px] h-4 sm:h-4.5 px-1 flex items-center justify-center rounded-full bg-rose-500 text-[9px] sm:text-[10px] font-black text-white shadow-md animate-bounce">
+                      {unreadCount}
                     </span>
                   )}
                 </button>
