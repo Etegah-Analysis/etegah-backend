@@ -289,8 +289,18 @@ export default function Navbar() {
   // Merge chat and platform notifications
   useEffect(() => {
     const userKey = getUserNotifKey();
-    const savedReadMsgIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${userKey}`) || '[]');
-    const savedReadPlatformIds = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${userKey}`) || '[]');
+    let savedReadMsgIds = [];
+    let savedReadPlatformIds = [];
+    try {
+      savedReadMsgIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${userKey}`) || '[]');
+    } catch (e) {
+      savedReadMsgIds = [];
+    }
+    try {
+      savedReadPlatformIds = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${userKey}`) || '[]');
+    } catch (e) {
+      savedReadPlatformIds = [];
+    }
 
     const allReadMsgIds = Array.from(new Set([...savedReadMsgIds, ...remoteReadMsgIds]));
     const allReadPlatformIds = Array.from(new Set([...savedReadPlatformIds, ...remoteReadPlatformIds]));
@@ -378,7 +388,12 @@ export default function Navbar() {
     const userKey = getUserNotifKey();
 
     if (targetMsg?.isPlatformNotif) {
-      const savedReadPlatform = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${userKey}`) || '[]');
+      let savedReadPlatform = [];
+      try {
+        savedReadPlatform = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${userKey}`) || '[]');
+      } catch (e) {
+        savedReadPlatform = [];
+      }
       if (msgId && !savedReadPlatform.includes(msgId)) {
         savedReadPlatform.push(msgId);
         localStorage.setItem(`etegah_read_platform_ids_${userKey}`, JSON.stringify(savedReadPlatform));
@@ -419,7 +434,12 @@ export default function Navbar() {
     setIsNotifOpen(false);
     setIsMobileMenuOpen(false);
 
-    const savedReadIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${userKey}`) || '[]');
+    let savedReadIds = [];
+    try {
+      savedReadIds = JSON.parse(localStorage.getItem(`etegah_read_ids_${userKey}`) || '[]');
+    } catch (e) {
+      savedReadIds = [];
+    }
     if (msgId && !savedReadIds.includes(msgId)) {
       savedReadIds.push(msgId);
       localStorage.setItem(`etegah_read_ids_${userKey}`, JSON.stringify(savedReadIds));
@@ -435,8 +455,18 @@ export default function Navbar() {
     const chatIds = notifications.filter(m => !m.isPlatformNotif).map(m => m.id);
     const platformIds = notifications.filter(m => m.isPlatformNotif).map(m => m.id);
 
-    const savedReadChat = JSON.parse(localStorage.getItem(`etegah_read_ids_${userKey}`) || '[]');
-    const savedReadPlatform = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${userKey}`) || '[]');
+    let savedReadChat = [];
+    let savedReadPlatform = [];
+    try {
+      savedReadChat = JSON.parse(localStorage.getItem(`etegah_read_ids_${userKey}`) || '[]');
+    } catch (e) {
+      savedReadChat = [];
+    }
+    try {
+      savedReadPlatform = JSON.parse(localStorage.getItem(`etegah_read_platform_ids_${userKey}`) || '[]');
+    } catch (e) {
+      savedReadPlatform = [];
+    }
 
     const newChatIds = Array.from(new Set([...savedReadChat, ...chatIds]));
     const newPlatformIds = Array.from(new Set([...savedReadPlatform, ...platformIds]));
