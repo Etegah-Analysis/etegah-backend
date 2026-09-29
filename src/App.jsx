@@ -13,36 +13,44 @@ import USOptions from './pages/USOptions';
 import News from './pages/News';
 import PlatformVideos from './pages/PlatformVideos';
 import Navbar from './components/Navbar';
-
 import WhatsAppWidget from './components/WhatsAppWidget';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // A layout wrapper for public pages with 3D Glassmorphism theme
 function PublicLayout({ children }) {
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col font-sans relative overflow-hidden">
-      {/* 3D Glassmorphism Glowing Logo Watermark Background (Upright & Compact) */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.06] overflow-hidden z-0">
-        <div className="relative flex flex-col items-center justify-center">
-          <img 
-            src="/logo.jpg" 
-            alt="3D Logo Watermark" 
-            className="w-[280px] h-[280px] sm:w-[350px] sm:h-[350px] rounded-full object-cover backdrop-blur-md drop-shadow-[0_0_60px_rgba(6,182,212,0.5)] border-4 border-cyan-400/30 shadow-[0_0_80px_rgba(6,182,212,0.3)]" 
-          />
-          <span className="text-2xl sm:text-3xl font-black tracking-widest text-cyan-300 mt-4 drop-shadow-[0_0_15px_rgba(6,182,212,0.7)] font-sans">
-            اتجاه للتحليل الذكي
-          </span>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-[#0B1120] text-white flex flex-col font-sans relative overflow-hidden">
+        {/* 3D Glassmorphism Glowing Logo Watermark Background (Upright & Compact) */}
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.06] overflow-hidden z-0">
+          <div className="relative flex flex-col items-center justify-center">
+            <img 
+              src="/logo.jpg" 
+              alt="3D Logo Watermark" 
+              className="w-[280px] h-[280px] sm:w-[350px] sm:h-[350px] rounded-full object-cover backdrop-blur-md drop-shadow-[0_0_60px_rgba(6,182,212,0.5)] border-4 border-cyan-400/30 shadow-[0_0_80px_rgba(6,182,212,0.3)]" 
+            />
+            <span className="text-2xl sm:text-3xl font-black tracking-widest text-cyan-300 mt-4 drop-shadow-[0_0_15px_rgba(6,182,212,0.7)] font-sans">
+              اتجاه للتحليل الذكي
+            </span>
+          </div>
+        </div>
+        {/* Ambient Glow Effects */}
+        <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
+        <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
+
+        <div className="relative z-10 flex flex-col flex-1">
+          <ErrorBoundary fallback={null}>
+            <Navbar />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+          <ErrorBoundary fallback={null}>
+            <WhatsAppWidget />
+          </ErrorBoundary>
         </div>
       </div>
-      {/* Ambient Glow Effects */}
-      <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
-      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
-
-      <div className="relative z-10 flex flex-col flex-1">
-        <Navbar />
-        {children}
-        <WhatsAppWidget />
-      </div>
-    </div>
+    </ErrorBoundary>
   );
 }
 
@@ -85,7 +93,7 @@ function App() {
                    signOut(auth);
                }
             }
-          });
+          }, (err) => console.warn("App user doc listener error:", err));
         }
       } else {
         if (docUnsub) {
@@ -96,6 +104,9 @@ function App() {
       
       setUser(currentUser);
       setLoading(false);
+    }, (err) => {
+      console.warn("Auth state changed error:", err);
+      setLoading(false);
     });
 
     return () => {
@@ -105,13 +116,13 @@ function App() {
   }, []);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-100">جاري التحميل...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[#0B1120] text-cyan-300 font-sans">جاري التحميل...</div>;
   }
 
   const isEmployee = Boolean(user) || localStorage.getItem('isEmpLoggedIn') === 'true';
 
   return (
-    <>
+    <ErrorBoundary>
       <Toaster position="top-center" toastOptions={{ duration: 4000, style: { background: '#333', color: '#fff', direction: 'rtl' } }} />
       <BrowserRouter>
         <Routes>
@@ -163,9 +174,13 @@ function App() {
               </VisitorProtectedRoute>
             } 
           />
+          <Route 
+            path="*" 
+            element={<PublicLayout><Home /></PublicLayout>} 
+          />
         </Routes>
       </BrowserRouter>
-    </>
+    </ErrorBoundary>
   );
 }
 
