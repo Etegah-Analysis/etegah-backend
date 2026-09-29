@@ -88,74 +88,90 @@ function USOptions() {
   }, []);
 
   const fetchOptionsChain = async (symbol, dateStr = '') => {
-
     setLoading(true);
     setError('');
     try {
-      const tickerUpper = symbol.toUpperCase();
+      const tickerUpper = symbol.toUpperCase().trim();
+      if (!tickerUpper) {
+        setLoading(false);
+        return;
+      }
       const docId = dateStr ? `${tickerUpper}_${dateStr}` : tickerUpper;
-      
-      // 1. محاولة جلب البيانات من Firebase أولاً
-      const docRef = doc(db, 'market_data', docId);
-      const docSnap = await getDoc(docRef);
-      
+
       let data = null;
-      let shouldRefresh = false;
-      
-      if (docSnap.exists()) {
-        const storedData = docSnap.data();
-        const lastUpdated = storedData.lastUpdated?.toDate() || new Date(0);
-        const now = new Date();
-        const ageInMinutes = (now - lastUpdated) / (1000 * 60);
-        
-        // إذا كانت البيانات أقدم من 5 دقائق، أو البيانات تالفة، قم بتحديثها
-        if (ageInMinutes > 5 || !storedData.data || !storedData.data.expirationDates || storedData.data.expirationDates.length === 0) {
-          shouldRefresh = true;
-        } else {
-          data = storedData.data;
+      let cachedFirebaseData = null;
+      let shouldRefresh = true;
+
+      // 1. Check Firebase Firestore market_data document first
+      try {
+        const docRef = doc(db, 'market_data', docId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const stored = docSnap.data();
+          if (stored && stored.data) {
+            cachedFirebaseData = stored.data;
+            const lastUpdated = stored.lastUpdated?.toDate ? stored.lastUpdated.toDate() : (stored.lastUpdated ? new Date(stored.lastUpdated) : new Date(0));
+            const ageInMinutes = (new Date() - lastUpdated) / (1000 * 60);
+
+            // If Firebase data is younger than 15 minutes and valid, use it directly without API call
+            if (ageInMinutes <= 15 && cachedFirebaseData.expirationDates && cachedFirebaseData.expirationDates.length > 0) {
+              data = cachedFirebaseData;
+              shouldRefresh = false;
+              console.log(`Loaded options data directly from Firebase market_data for ${docId}`);
+            }
+          }
         }
-      } else {
-        shouldRefresh = true;
+      } catch (dbReadErr) {
+        console.warn('Firebase market_data read warning:', dbReadErr);
       }
-      
-      // 2. إذا كانت البيانات قديمة أو غير موجودة، جلبها من الـ Serverless Function الخاصة بنا
+
+      // 2. Fetch fresh data from API if needed or if cache was empty/expired
       if (shouldRefresh) {
-        console.log(`Fetching fresh data for ${tickerUpper} (date: ${dateStr}) from Vercel API...`);
-        
-        const apiUrl = `/api/options/${tickerUpper}?t=${Date.now()}${dateStr ? `&date=${dateStr}` : ''}`;
-        const response = await fetch(apiUrl, { cache: 'no-store' });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch from Vercel API');
+        try {
+          console.log(`Fetching fresh options data for ${tickerUpper} (date: ${dateStr}) from API...`);
+          const apiUrl = `/api/options/${tickerUpper}?t=${Date.now()}${dateStr ? `&date=${dateStr}` : ''}`;
+          const response = await fetch(apiUrl, { cache: 'no-store' });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+              const freshData = Array.isArray(result.data) ? result.data[0] : result.data;
+              if (freshData) {
+                data = freshData;
+                // Store fresh data in Firebase
+                try {
+                  const docRef = doc(db, 'market_data', docId);
+                  await setDoc(docRef, {
+                    ticker: tickerUpper,
+                    date: dateStr || '',
+                    data: freshData,
+                    lastUpdated: serverTimestamp()
+                  }, { merge: true });
+                  console.log(`Successfully stored fresh options data in Firebase for ${docId}`);
+                } catch (fsWriteErr) {
+                  console.warn('Firebase setDoc warning:', fsWriteErr);
+                }
+              }
+            }
+          }
+        } catch (apiErr) {
+          console.warn('API fetch failed, attempting fallback to stored Firebase data:', apiErr);
         }
-        
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-          data = Array.isArray(result.data) ? result.data[0] : result.data;
-          
-          // تخزين البيانات في Firebase
-          await setDoc(docRef, {
-            ticker: tickerUpper,
-            date: dateStr || '',
-            data: data,
-            lastUpdated: serverTimestamp()
-          }, { merge: true });
-          
-          console.log(`Data stored in Firebase for ${docId}`);
-        } else {
-          throw new Error('Invalid data format from Vercel API');
+
+        // Fallback to cached Firebase data if API fetch failed
+        if (!data && cachedFirebaseData) {
+          console.log(`Using cached Firebase market_data for ${docId} after API failure`);
+          data = cachedFirebaseData;
         }
       }
-      
-      // 3. عرض البيانات
+
+      // 3. Render Data
       if (data) {
-        // Set underlying price if available
         if (data.quote && data.quote.regularMarketPrice) {
           setUnderlyingPrice(data.quote.regularMarketPrice);
         }
-        
-        // Set available expiration dates
+
         if (data.expirationDates && data.expirationDates.length > 0) {
           const dates = data.expirationDates.map(d => {
             const date = typeof d === 'number' ? new Date(d * 1000) : new Date(d);
@@ -166,8 +182,7 @@ function USOptions() {
             setSelectedDate(dates[0]);
           }
         }
-        
-        // Extract options data
+
         if (data.options && data.options.length > 0) {
           const currentOptionChain = data.options[0];
           setCalls(currentOptionChain.calls || []);
@@ -177,11 +192,11 @@ function USOptions() {
           setPuts([]);
         }
       } else {
-        setError('فشل جلب البيانات. يرجى المحاولة لاحقاً.');
+        setError('تعذر جلب بيانات العقود حالياً. يرجى المحاولة لاحقاً.');
       }
     } catch (err) {
-      console.error(err);
-      setError('لا يمكن الاتصال بخادم جلب البيانات. يرجى المحاولة لاحقاً.');
+      console.error("fetchOptionsChain error:", err);
+      setError('حدث خطأ أثناء جلب البيانات. يرجى المحاولة لاحقاً.');
     } finally {
       setLoading(false);
     }

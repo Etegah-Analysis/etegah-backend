@@ -534,20 +534,10 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Top bar left section (RTL): Bell + User/Emp badge + Contact Us + Logout */}
+        {/* Top bar left section (RTL): Bell + User/Emp badge + Logout */}
         <div className="mobile-controls flex items-center gap-2">
           {isLoggedIn && (
             <div className="flex items-center gap-2">
-              {/* Header Contact Us WhatsApp Button */}
-              <button
-                onClick={handleOpenChat}
-                className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold transition flex items-center gap-1.5 shadow-md text-xs cursor-pointer active:scale-95 shrink-0 border border-emerald-400/40"
-                title="تواصل معنا عبر الواتساب"
-              >
-                <MessageCircle size={14} className="animate-bounce text-emerald-200" />
-                <span className="hidden sm:inline">تواصل معنا</span>
-              </button>
-
               {/* ALWAYS VISIBLE Single Notification Bell Button */}
               <div className="relative" ref={notifRef}>
                 <button
